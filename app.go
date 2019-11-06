@@ -24,16 +24,11 @@ func (a *App) AddHttp(handler http.Handler) {
 }
 
 func (a *App) Start() {
-	server := &http.Server{
-		Handler: a.httpHandler,
-		Addr:    fmt.Sprintf(":%d", a.httpPort),
-	}
-
-	a.httpServer = server
+	a.httpServer = newHttpServer(a.httpHandler, a.httpPort)
 
 	a.registerStopOnSigTerm()
 
-	if err := server.ListenAndServe(); err != nil {
+	if err := a.httpServer.ListenAndServe(); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
 			panic(fmt.Errorf("server did not exit gracefully: %w", err))
 		}
@@ -57,4 +52,11 @@ func (a App) registerStopOnSigTerm() {
 		fmt.Println()
 		a.Stop()
 	}()
+}
+
+func newHttpServer(handler http.Handler, port int) *http.Server {
+	return &http.Server{
+		Handler: handler,
+		Addr:    fmt.Sprintf(":%d", port),
+	}
 }

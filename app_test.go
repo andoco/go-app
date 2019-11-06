@@ -14,3 +14,11 @@ func TestAddHttp(t *testing.T) {
 
 	assert.Equal(t, handler, app.httpHandler, "Handler not added")
 }
+
+func TestNewHTTPServer(t *testing.T) {
+	handler := http.NewServeMux()
+	server := newHttpServer(handler, 8081)
+
+	assert.Equal(t, handler, server.Handler, "Handler not set")
+	assert.Equal(t, ":8081", server.Addr, "Addr not set")
+}
