@@ -7,15 +7,22 @@ import (
 )
 
 type sqsWorkerState struct {
+	endpoint     string
 	receiveQueue string
 	handler      MsgHandler
 }
 
+type SQSWorkerConfig struct {
+	Endpoint     string
+	ReceiveQueue string
+}
+
 type MsgHandler func(msg *sqs.Message) error
 
-func (a *App) AddSQS(queue string, handler MsgHandler) {
+func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 	s := &sqsWorkerState{
-		receiveQueue: queue,
+		endpoint:     config.Endpoint,
+		receiveQueue: config.ReceiveQueue,
 		handler:      handler,
 	}
 
@@ -33,6 +40,7 @@ func workerLoop(state *sqsWorkerState) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
+	sess.Config.MergeIn(aws.NewConfig().WithEndpoint(state.endpoint))
 
 	svc := sqs.New(sess)
 	receiveMessageInput := newReceiveMessageInput(state)
@@ -47,6 +55,7 @@ func workerLoop(state *sqsWorkerState) {
 		for _, msg := range result.Messages {
 			if err := state.handler(msg); err != nil {
 				// TOOD: dead-letter
+				panic(err)
 			}
 
 			if _, err = svc.DeleteMessage(newDeleteMessageInput(state, msg)); err != nil {
