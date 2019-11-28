@@ -26,6 +26,10 @@ func NewApp(name string) *App {
 	return &App{name: name}
 }
 
+func (a App) ReadConfig(c interface{}) error {
+	return ReadEnvConfig(a.name, c)
+}
+
 func (a *App) AddHttp(handler http.Handler, port int) {
 	s := &httpState{
 		httpHandler: handler,

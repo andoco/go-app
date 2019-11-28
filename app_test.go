@@ -2,6 +2,7 @@ package app
 
 import (
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,19 @@ func TestNewApp(t *testing.T) {
 	assert.NotNil(t, app)
 	assert.Nil(t, app.httpServers)
 	assert.Equal(t, "MyApp", app.name, "wrong app name")
+}
+
+func TestReadConfig(t *testing.T) {
+	c := &struct {
+		Foo string
+	}{}
+
+	os.Setenv("MYAPP_FOO", "Foo")
+
+	app := NewApp("MyApp")
+	app.ReadConfig(c)
+
+	assert.Equal(t, "Foo", c.Foo)
 }
 
 func TestAddHttp(t *testing.T) {
