@@ -8,14 +8,15 @@ import (
 )
 
 func TestNewApp(t *testing.T) {
-	app := NewApp()
+	app := NewApp("MyApp")
 
 	assert.NotNil(t, app)
 	assert.Nil(t, app.httpServers)
+	assert.Equal(t, "MyApp", app.name, "wrong app name")
 }
 
 func TestAddHttp(t *testing.T) {
-	app := NewApp()
+	app := NewApp("MyApp")
 	handler := http.NewServeMux()
 	app.AddHttp(handler, 8080)
 

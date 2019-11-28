@@ -11,6 +11,7 @@ import (
 )
 
 type App struct {
+	name        string
 	httpServers []*httpState
 	wg          sync.WaitGroup
 }
@@ -21,8 +22,8 @@ type httpState struct {
 	httpServer  *http.Server
 }
 
-func NewApp() *App {
-	return &App{}
+func NewApp(name string) *App {
+	return &App{name: name}
 }
 
 func (a *App) AddHttp(handler http.Handler, port int) {
