@@ -48,6 +48,8 @@ func (a *App) Start() {
 		a.wg.Add(1)
 	}
 
+	a.startSQSWorkers()
+
 	a.wg.Wait()
 }
 
