@@ -7,9 +7,15 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 )
 
 type App struct {
+	httpServers []*httpState
+	wg          sync.WaitGroup
+}
+
+type httpState struct {
 	httpHandler http.Handler
 	httpPort    int
 	httpServer  *http.Server
@@ -20,26 +26,30 @@ func NewApp() *App {
 }
 
 func (a *App) AddHttp(handler http.Handler, port int) {
-	a.httpHandler = handler
-	a.httpPort = port
+	s := &httpState{
+		httpHandler: handler,
+		httpPort:    port,
+	}
+
+	a.httpServers = append(a.httpServers, s)
 }
 
 func (a *App) Start() {
-	a.httpServer = newHttpServer(a.httpHandler, a.httpPort)
-
-	a.registerStopOnSigTerm()
-
-	if err := a.httpServer.ListenAndServe(); err != nil {
-		if !errors.Is(err, http.ErrServerClosed) {
-			panic(fmt.Errorf("server did not exit gracefully: %w", err))
-		}
+	for _, s := range a.httpServers {
+		s.httpServer = newHttpServer(s.httpHandler, s.httpPort)
+		a.registerStopOnSigTerm()
+		a.runListenAndServe(s)
+		a.wg.Add(1)
 	}
-	fmt.Println("HTTP servers shutdown gracefully")
+
+	a.wg.Wait()
 }
 
 func (a App) Stop() {
-	if err := a.httpServer.Shutdown(context.TODO()); err != nil {
-		panic(err)
+	for _, s := range a.httpServers {
+		if err := s.httpServer.Shutdown(context.TODO()); err != nil {
+			panic(err)
+		}
 	}
 	fmt.Println("App stopped")
 }
@@ -60,4 +70,17 @@ func newHttpServer(handler http.Handler, port int) *http.Server {
 		Handler: handler,
 		Addr:    fmt.Sprintf(":%d", port),
 	}
+}
+
+func (a *App) runListenAndServe(s *httpState) {
+	go func() {
+		defer a.wg.Done()
+
+		if err := s.httpServer.ListenAndServe(); err != nil {
+			if !errors.Is(err, http.ErrServerClosed) {
+				panic(fmt.Errorf("server did not exit gracefully: %w", err))
+			}
+		}
+		fmt.Println("HTTP servers shutdown gracefully")
+	}()
 }

@@ -13,9 +13,15 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Ok at %v", time.Now())
+		fmt.Fprintf(w, "Ok(1) at %v", time.Now())
 	})
-	app.AddHttp(mux)
+	app.AddHttp(mux, 8081)
+
+	mux2 := http.NewServeMux()
+	mux2.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Ok(2) at %v", time.Now())
+	})
+	app.AddHttp(mux2, 8082)
 
 	fmt.Println("Press CTRL+c to exit")
 	app.Start()
