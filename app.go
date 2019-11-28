@@ -16,11 +16,12 @@ type App struct {
 }
 
 func NewApp() *App {
-	return &App{httpPort: 8081}
+	return &App{}
 }
 
-func (a *App) AddHttp(handler http.Handler) {
+func (a *App) AddHttp(handler http.Handler, port int) {
 	a.httpHandler = handler
+	a.httpPort = port
 }
 
 func (a *App) Start() {

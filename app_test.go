@@ -16,9 +16,10 @@ func TestNewApp(t *testing.T) {
 func TestAddHttp(t *testing.T) {
 	app := NewApp()
 	handler := http.NewServeMux()
-	app.AddHttp(handler)
+	app.AddHttp(handler, 8080)
 
 	assert.Equal(t, handler, app.httpHandler, "Handler not added")
+	assert.Equal(t, 8080, app.httpPort, "Wrong port")
 }
 
 func TestNewHTTPServer(t *testing.T) {
