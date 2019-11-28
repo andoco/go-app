@@ -13,6 +13,7 @@ func TestNewApp(t *testing.T) {
 
 	assert.NotNil(t, app)
 	assert.Nil(t, app.httpServers)
+	assert.Nil(t, app.sqsWorkers)
 	assert.Equal(t, "MyApp", app.name, "wrong app name")
 }
 

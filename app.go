@@ -13,6 +13,7 @@ import (
 type App struct {
 	name        string
 	httpServers []*httpState
+	sqsWorkers  []*sqsWorkerState
 	wg          sync.WaitGroup
 }
 
