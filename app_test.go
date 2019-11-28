@@ -7,6 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewApp(t *testing.T) {
+	app := NewApp()
+
+	assert.NotNil(t, app)
+}
+
 func TestAddHttp(t *testing.T) {
 	app := NewApp()
 	handler := http.NewServeMux()
