@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
@@ -111,20 +112,31 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 			fmt.Println("Receiving messages")
 			messages, err := state.receiver(ctx)
 			if err != nil {
+				fmt.Println(err)
+				if aerr, ok := err.(awserr.Error); ok {
+					switch aerr.Code() {
+					case sqs.ErrCodeQueueDoesNotExist:
+						fmt.Println("Aborting SQS worker")
+						return
+					}
+				}
 				continue
 			}
 
 			for _, msg := range messages {
 				if err := state.handler(msg); err != nil {
 					if err := state.sender(ctx, state.deadLetterQueue, *msg.Body); err != nil {
+						fmt.Println(err)
 						continue
 					}
 					if err := state.deleter(ctx, msg); err != nil {
+						fmt.Println(err)
 						continue
 					}
 				}
 
 				if err = state.deleter(ctx, msg); err != nil {
+					fmt.Println(err)
 					continue
 				}
 			}
