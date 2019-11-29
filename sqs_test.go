@@ -12,7 +12,6 @@ import (
 func TestAddSQS(t *testing.T) {
 	os.Setenv("MYAPP_FOO_ENDPOINT", "test-endpoint")
 	os.Setenv("MYAPP_FOO_RECEIVEQUEUE", "test-queue")
-	os.Setenv("MYAPP_FOO_DEADLETTERQUEUE", "dead-letter-queue")
 
 	app := NewApp("MyApp")
 	app.AddSQS("Foo", func(_ *sqs.Message) error { return nil })
@@ -20,23 +19,20 @@ func TestAddSQS(t *testing.T) {
 	assert.Len(t, app.sqsWorkers, 1)
 	assert.Equal(t, "test-endpoint", app.sqsWorkers[0].endpoint)
 	assert.Equal(t, "test-queue", app.sqsWorkers[0].receiveQueue)
-	assert.Equal(t, "dead-letter-queue", app.sqsWorkers[0].deadLetterQueue)
 	assert.NotNil(t, app.sqsWorkers[0].handler)
 }
 
 func TestAddSQSWithConfig(t *testing.T) {
 	app := NewApp("MyApp")
 	c := &SQSWorkerConfig{
-		Endpoint:        "test-endpoint",
-		ReceiveQueue:    "test-queue",
-		DeadLetterQueue: "dead-letter-queue",
+		Endpoint:     "test-endpoint",
+		ReceiveQueue: "test-queue",
 	}
 	app.AddSQSWithConfig(c, func(_ *sqs.Message) error { return nil })
 
 	assert.Len(t, app.sqsWorkers, 1)
 	assert.Equal(t, "test-endpoint", app.sqsWorkers[0].endpoint)
 	assert.Equal(t, "test-queue", app.sqsWorkers[0].receiveQueue)
-	assert.Equal(t, "dead-letter-queue", app.sqsWorkers[0].deadLetterQueue)
 	assert.NotNil(t, app.sqsWorkers[0].handler)
 }
 

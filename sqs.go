@@ -23,9 +23,8 @@ type sqsWorkerState struct {
 }
 
 type SQSWorkerConfig struct {
-	Endpoint        string
-	ReceiveQueue    string
-	DeadLetterQueue string
+	Endpoint     string
+	ReceiveQueue string
 }
 
 type MsgHandler func(msg *sqs.Message) error
@@ -41,11 +40,10 @@ func (a *App) AddSQS(prefix string, handler MsgHandler) {
 
 func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 	s := &sqsWorkerState{
-		wg:              a.wg,
-		endpoint:        config.Endpoint,
-		receiveQueue:    config.ReceiveQueue,
-		deadLetterQueue: config.DeadLetterQueue,
-		handler:         handler,
+		wg:           a.wg,
+		endpoint:     config.Endpoint,
+		receiveQueue: config.ReceiveQueue,
+		handler:      handler,
 	}
 
 	a.sqsWorkers = append(a.sqsWorkers, s)
@@ -125,14 +123,8 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 
 			for _, msg := range messages {
 				if err := state.handler(msg); err != nil {
-					if err := state.sender(ctx, state.deadLetterQueue, *msg.Body); err != nil {
-						fmt.Println(err)
-						continue
-					}
-					if err := state.deleter(ctx, msg); err != nil {
-						fmt.Println(err)
-						continue
-					}
+					fmt.Println(err)
+					continue
 				}
 
 				if err = state.deleter(ctx, msg); err != nil {
