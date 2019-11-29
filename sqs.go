@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/rs/zerolog"
 )
 
 type sqsWorkerState struct {
@@ -16,6 +17,7 @@ type sqsWorkerState struct {
 	handler      MsgHandler
 	queue        *Queue
 	wg           *sync.WaitGroup
+	logger       zerolog.Logger
 }
 
 type SQSWorkerConfig struct {
@@ -23,12 +25,12 @@ type SQSWorkerConfig struct {
 	ReceiveQueue string
 }
 
-type MsgHandler func(msg *sqs.Message) error
+type MsgHandler func(msg *sqs.Message, logger zerolog.Logger) error
 
 func (a *App) AddSQS(prefix string, handler MsgHandler) {
 	c := &SQSWorkerConfig{}
 	if err := ReadEnvConfig(fmt.Sprintf("%s_%s", a.name, prefix), c); err != nil {
-		panic(err)
+		a.logger.Fatal().Err(err).Str("prefix", prefix).Msg("Cannot read configuration")
 	}
 
 	a.AddSQSWithConfig(c, handler)
@@ -40,6 +42,7 @@ func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 		endpoint:     config.Endpoint,
 		receiveQueue: config.ReceiveQueue,
 		handler:      handler,
+		logger:       a.logger.With().Str("queue", config.ReceiveQueue).Logger(),
 	}
 
 	a.sqsWorkers = append(a.sqsWorkers, s)
@@ -48,6 +51,7 @@ func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 func (a *App) startSQSWorkers(ctx context.Context) {
 	for _, ws := range a.sqsWorkers {
 		setupQueue(ws)
+		ws.logger.Debug().Msg("Starting queue worker")
 		go workerLoop(ctx, ws)
 		a.wg.Add(1)
 	}
@@ -70,25 +74,28 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("Exiting SQS worker loop")
+			state.logger.Debug().Msg("Exiting worker loop")
 			return
 		default:
-			fmt.Println("Receiving messages")
+			state.logger.Debug().Msg("Receiving messages")
 			messages, err := state.queue.Receive(ctx, state.receiveQueue, 1)
 			if err != nil {
-				fmt.Println(err)
-
+				state.logger.Error().Err(err).Msg("Failed to receive message")
 				continue
 			}
 
+			state.logger.Debug().Int("numMessages", len(messages)).Msg("Received messages")
+
 			for _, msg := range messages {
-				if err := state.handler(msg); err != nil {
-					fmt.Println(err)
+				logger := state.logger.With().Str("messageId", *msg.MessageId).Logger()
+
+				if err := state.handler(msg, logger); err != nil {
+					logger.Error().Err(err).Msg("Failed to handle message")
 					continue
 				}
 
 				if err = state.queue.Delete(ctx, msg, state.receiveQueue); err != nil {
-					fmt.Println(err)
+					logger.Error().Err(err).Msg("Failed to delete message")
 					continue
 				}
 			}

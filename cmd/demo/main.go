@@ -7,6 +7,7 @@ import (
 
 	"github.com/andoco/go-app"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/rs/zerolog"
 )
 
 func main() {
@@ -24,13 +25,13 @@ func main() {
 	})
 	a.AddHttp(mux2, 8082)
 
-	a.AddSQSWithConfig(&app.SQSWorkerConfig{Endpoint: "http://localhost:4576", ReceiveQueue: "http://localhost:4576/queue/test-queue"}, func(msg *sqs.Message) error {
-		fmt.Printf("Handling message %v\n", msg)
+	a.AddSQSWithConfig(&app.SQSWorkerConfig{Endpoint: "http://localhost:4576", ReceiveQueue: "http://localhost:4576/queue/test-queue"}, func(msg *sqs.Message, logger zerolog.Logger) error {
+		logger.Info().Msg("Handling message")
 		return nil
 	})
 
-	a.AddSQSWithConfig(&app.SQSWorkerConfig{Endpoint: "http://localhost:4576", ReceiveQueue: "http://localhost:4576/queue/test-queue-2"}, func(msg *sqs.Message) error {
-		fmt.Printf("Handling message %v\n", msg)
+	a.AddSQSWithConfig(&app.SQSWorkerConfig{Endpoint: "http://localhost:4576", ReceiveQueue: "http://localhost:4576/queue/test-queue-2"}, func(msg *sqs.Message, logger zerolog.Logger) error {
+		logger.Info().Msg("Handling message")
 		return nil
 	})
 

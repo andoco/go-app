@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+
+	"github.com/rs/zerolog"
 )
 
 type App struct {
@@ -16,6 +18,7 @@ type App struct {
 	sqsWorkers  []*sqsWorkerState
 	wg          *sync.WaitGroup
 	cancel      context.CancelFunc
+	logger      zerolog.Logger
 }
 
 type httpState struct {
@@ -25,7 +28,8 @@ type httpState struct {
 }
 
 func NewApp(name string) *App {
-	return &App{name: name, wg: &sync.WaitGroup{}}
+	logger := zerolog.New(os.Stderr).With().Str("appName", name).Logger()
+	return &App{name: name, wg: &sync.WaitGroup{}, logger: logger}
 }
 
 func (a App) ReadConfig(c interface{}) error {
@@ -42,6 +46,7 @@ func (a *App) AddHttp(handler http.Handler, port int) {
 }
 
 func (a *App) Start() {
+	a.logger.Debug().Msg("Starting app")
 	ctx := context.Background()
 	ctx2, cancel := context.WithCancel(ctx)
 
@@ -60,6 +65,8 @@ func (a *App) Start() {
 }
 
 func (a App) Stop() {
+	a.logger.Debug().Msg("Stopping app")
+
 	for _, s := range a.httpServers {
 		if err := s.httpServer.Shutdown(context.TODO()); err != nil {
 			panic(err)
@@ -67,8 +74,6 @@ func (a App) Stop() {
 	}
 
 	a.cancel()
-
-	fmt.Println("App stopped")
 }
 
 func (a App) registerStopOnSigTerm() {
@@ -77,7 +82,6 @@ func (a App) registerStopOnSigTerm() {
 
 	go func() {
 		<-c
-		fmt.Println()
 		a.Stop()
 	}()
 }
@@ -98,6 +102,6 @@ func (a *App) runListenAndServe(s *httpState) {
 				panic(fmt.Errorf("server did not exit gracefully: %w", err))
 			}
 		}
-		fmt.Println("HTTP server shutdown gracefully")
+		a.logger.Debug().Msg("HTTP server shutdown")
 	}()
 }
