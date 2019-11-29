@@ -8,12 +8,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAddSQS(t *testing.T) {
+func TestAddSQSWithConfig(t *testing.T) {
 	app := NewApp("MyApp")
-	app.AddSQS("test-queue", func(_ *sqs.Message) error { return nil })
+	c := &SQSWorkerConfig{
+		Endpoint:        "test-endpoint",
+		ReceiveQueue:    "test-queue",
+		DeadLetterQueue: "dead-letter-queue",
+	}
+	app.AddSQSWithConfig(c, func(_ *sqs.Message) error { return nil })
 
 	assert.Len(t, app.sqsWorkers, 1)
+	assert.Equal(t, "test-endpoint", app.sqsWorkers[0].endpoint)
 	assert.Equal(t, "test-queue", app.sqsWorkers[0].receiveQueue)
+	assert.Equal(t, "dead-letter-queue", app.sqsWorkers[0].deadLetterQueue)
 	assert.NotNil(t, app.sqsWorkers[0].handler)
 }
 

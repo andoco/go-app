@@ -7,23 +7,26 @@ import (
 )
 
 type sqsWorkerState struct {
-	endpoint     string
-	receiveQueue string
-	handler      MsgHandler
+	endpoint        string
+	receiveQueue    string
+	deadLetterQueue string
+	handler         MsgHandler
 }
 
 type SQSWorkerConfig struct {
-	Endpoint     string
-	ReceiveQueue string
+	Endpoint        string
+	ReceiveQueue    string
+	DeadLetterQueue string
 }
 
 type MsgHandler func(msg *sqs.Message) error
 
 func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 	s := &sqsWorkerState{
-		endpoint:     config.Endpoint,
-		receiveQueue: config.ReceiveQueue,
-		handler:      handler,
+		endpoint:        config.Endpoint,
+		receiveQueue:    config.ReceiveQueue,
+		deadLetterQueue: config.DeadLetterQueue,
+		handler:         handler,
 	}
 
 	a.sqsWorkers = append(a.sqsWorkers, s)
