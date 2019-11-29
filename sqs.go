@@ -103,28 +103,30 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 	defer state.wg.Done()
 
 	for {
-		if ctx.Err() != nil {
+		select {
+		case <-ctx.Done():
 			fmt.Println("Exiting SQS worker loop")
-			break
-		}
-
-		messages, err := state.receiver(ctx)
-		if err != nil {
-			continue
-		}
-
-		for _, msg := range messages {
-			if err := state.handler(msg); err != nil {
-				if err := state.sender(ctx, state.deadLetterQueue, *msg.Body); err != nil {
-					continue
-				}
-				if err := state.deleter(ctx, msg); err != nil {
-					continue
-				}
+			return
+		default:
+			fmt.Println("Receiving messages")
+			messages, err := state.receiver(ctx)
+			if err != nil {
+				continue
 			}
 
-			if err = state.deleter(ctx, msg); err != nil {
-				continue
+			for _, msg := range messages {
+				if err := state.handler(msg); err != nil {
+					if err := state.sender(ctx, state.deadLetterQueue, *msg.Body); err != nil {
+						continue
+					}
+					if err := state.deleter(ctx, msg); err != nil {
+						continue
+					}
+				}
+
+				if err = state.deleter(ctx, msg); err != nil {
+					continue
+				}
 			}
 		}
 	}
