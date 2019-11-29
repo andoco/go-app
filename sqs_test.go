@@ -1,7 +1,6 @@
 package app
 
 import (
-	"errors"
 	"os"
 	"testing"
 
@@ -66,22 +65,4 @@ func TestNewDeleteMessageInput(t *testing.T) {
 	assert.NotNil(t, dmi)
 	assert.Equal(t, aws.String("test-queue"), dmi.QueueUrl)
 	assert.Equal(t, aws.String("test-handle"), dmi.ReceiptHandle)
-}
-
-func TestEvalMsgAction(t *testing.T) {
-	testCases := []struct {
-		name string
-		err  error
-		out  MsgAction
-	}{
-		{"no error", nil, MsgActionDelete},
-		{"error", errors.New("an error"), MsgActionDeadLetter},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := evalMsgAction(tc.err)
-			assert.Equal(t, tc.out, result)
-		})
-	}
 }

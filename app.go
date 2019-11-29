@@ -15,6 +15,7 @@ type App struct {
 	httpServers []*httpState
 	sqsWorkers  []*sqsWorkerState
 	wg          *sync.WaitGroup
+	cancel      context.CancelFunc
 }
 
 type httpState struct {
@@ -41,15 +42,20 @@ func (a *App) AddHttp(handler http.Handler, port int) {
 }
 
 func (a *App) Start() {
+	ctx := context.Background()
+	ctx2, cancel := context.WithCancel(ctx)
+
+	a.cancel = cancel
+
 	for _, s := range a.httpServers {
 		s.httpServer = newHttpServer(s.httpHandler, s.httpPort)
-		a.registerStopOnSigTerm()
 		a.runListenAndServe(s)
 		a.wg.Add(1)
 	}
 
-	a.startSQSWorkers()
+	a.startSQSWorkers(ctx2)
 
+	a.registerStopOnSigTerm()
 	a.wg.Wait()
 }
 
@@ -59,6 +65,9 @@ func (a App) Stop() {
 			panic(err)
 		}
 	}
+
+	a.cancel()
+
 	fmt.Println("App stopped")
 }
 
@@ -89,6 +98,6 @@ func (a *App) runListenAndServe(s *httpState) {
 				panic(fmt.Errorf("server did not exit gracefully: %w", err))
 			}
 		}
-		fmt.Println("HTTP servers shutdown gracefully")
+		fmt.Println("HTTP server shutdown gracefully")
 	}()
 }
