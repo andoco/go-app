@@ -1,12 +1,29 @@
 package app
 
 import (
+	"errors"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestAddSQS(t *testing.T) {
+	os.Setenv("MYAPP_FOO_ENDPOINT", "test-endpoint")
+	os.Setenv("MYAPP_FOO_RECEIVEQUEUE", "test-queue")
+	os.Setenv("MYAPP_FOO_DEADLETTERQUEUE", "dead-letter-queue")
+
+	app := NewApp("MyApp")
+	app.AddSQS("Foo", func(_ *sqs.Message) error { return nil })
+
+	assert.Len(t, app.sqsWorkers, 1)
+	assert.Equal(t, "test-endpoint", app.sqsWorkers[0].endpoint)
+	assert.Equal(t, "test-queue", app.sqsWorkers[0].receiveQueue)
+	assert.Equal(t, "dead-letter-queue", app.sqsWorkers[0].deadLetterQueue)
+	assert.NotNil(t, app.sqsWorkers[0].handler)
+}
 
 func TestAddSQSWithConfig(t *testing.T) {
 	app := NewApp("MyApp")
@@ -49,4 +66,22 @@ func TestNewDeleteMessageInput(t *testing.T) {
 	assert.NotNil(t, dmi)
 	assert.Equal(t, aws.String("test-queue"), dmi.QueueUrl)
 	assert.Equal(t, aws.String("test-handle"), dmi.ReceiptHandle)
+}
+
+func TestEvalMsgAction(t *testing.T) {
+	testCases := []struct {
+		name string
+		err  error
+		out  MsgAction
+	}{
+		{"no error", nil, MsgActionDelete},
+		{"error", errors.New("an error"), MsgActionDeadLetter},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := evalMsgAction(tc.err)
+			assert.Equal(t, tc.out, result)
+		})
+	}
 }

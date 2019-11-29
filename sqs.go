@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -20,6 +22,15 @@ type SQSWorkerConfig struct {
 }
 
 type MsgHandler func(msg *sqs.Message) error
+
+func (a *App) AddSQS(prefix string, handler MsgHandler) {
+	c := &SQSWorkerConfig{}
+	if err := ReadEnvConfig(fmt.Sprintf("%s_%s", a.name, prefix), c); err != nil {
+		panic(err)
+	}
+
+	a.AddSQSWithConfig(c, handler)
+}
 
 func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 	s := &sqsWorkerState{
@@ -65,8 +76,22 @@ func workerLoop(state *sqsWorkerState) {
 				panic(err)
 			}
 		}
-
 	}
+}
+
+type MsgAction int
+
+const (
+	MsgActionDelete MsgAction = iota
+	MsgActionDeadLetter
+)
+
+func evalMsgAction(err error) MsgAction {
+	if err == nil {
+		return MsgActionDelete
+	}
+
+	return MsgActionDeadLetter
 }
 
 func newReceiveMessageInput(state *sqsWorkerState) *sqs.ReceiveMessageInput {
