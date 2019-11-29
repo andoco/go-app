@@ -6,20 +6,16 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
 type sqsWorkerState struct {
-	endpoint        string
-	receiveQueue    string
-	deadLetterQueue string
-	handler         MsgHandler
-	receiver        messageReceiver
-	sender          messageSender
-	deleter         messageDeleter
-	wg              *sync.WaitGroup
+	endpoint     string
+	receiveQueue string
+	handler      MsgHandler
+	queue        *Queue
+	wg           *sync.WaitGroup
 }
 
 type SQSWorkerConfig struct {
@@ -51,51 +47,21 @@ func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 
 func (a *App) startSQSWorkers(ctx context.Context) {
 	for _, ws := range a.sqsWorkers {
-		setupMessageFuncs(ws)
+		setupQueue(ws)
 		go workerLoop(ctx, ws)
 		a.wg.Add(1)
 	}
 }
 
-type messageReceiver func(ctx context.Context) ([]*sqs.Message, error)
-type messageSender func(ctx context.Context, queue string, body string) error
-type messageDeleter func(ctx context.Context, msg *sqs.Message) error
-
-func setupMessageFuncs(state *sqsWorkerState) {
+func setupQueue(state *sqsWorkerState) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 	sess.Config.MergeIn(aws.NewConfig().WithEndpoint(state.endpoint))
 
 	svc := sqs.New(sess)
-
-	state.receiver = func(ctx context.Context) ([]*sqs.Message, error) {
-		input := newReceiveMessageInput(state)
-		output, err := svc.ReceiveMessageWithContext(ctx, input)
-		if err != nil {
-			return nil, err
-		}
-
-		return output.Messages, nil
-	}
-
-	state.deleter = func(ctx context.Context, msg *sqs.Message) error {
-		input := newDeleteMessageInput(state, msg)
-		_, err := svc.DeleteMessageWithContext(ctx, input)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	state.sender = func(ctx context.Context, queue, body string) error {
-		input := newSendMessageInput(state, queue, body)
-		_, err := svc.SendMessageWithContext(ctx, input)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
+	queue := NewQueue(NewQueueConfig(), svc)
+	state.queue = queue
 }
 
 func workerLoop(ctx context.Context, state *sqsWorkerState) {
@@ -108,16 +74,10 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 			return
 		default:
 			fmt.Println("Receiving messages")
-			messages, err := state.receiver(ctx)
+			messages, err := state.queue.Receive(ctx, state.receiveQueue, 1)
 			if err != nil {
 				fmt.Println(err)
-				if aerr, ok := err.(awserr.Error); ok {
-					switch aerr.Code() {
-					case sqs.ErrCodeQueueDoesNotExist:
-						fmt.Println("Aborting SQS worker")
-						return
-					}
-				}
+
 				continue
 			}
 
@@ -127,33 +87,11 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 					continue
 				}
 
-				if err = state.deleter(ctx, msg); err != nil {
+				if err = state.queue.Delete(ctx, msg, state.receiveQueue); err != nil {
 					fmt.Println(err)
 					continue
 				}
 			}
 		}
-	}
-}
-
-func newReceiveMessageInput(state *sqsWorkerState) *sqs.ReceiveMessageInput {
-	return &sqs.ReceiveMessageInput{
-		QueueUrl:            aws.String(state.receiveQueue),
-		MaxNumberOfMessages: aws.Int64(1),
-		WaitTimeSeconds:     aws.Int64(10),
-	}
-}
-
-func newDeleteMessageInput(state *sqsWorkerState, msg *sqs.Message) *sqs.DeleteMessageInput {
-	return &sqs.DeleteMessageInput{
-		QueueUrl:      aws.String(state.receiveQueue),
-		ReceiptHandle: msg.ReceiptHandle,
-	}
-}
-
-func newSendMessageInput(state *sqsWorkerState, queue string, body string) *sqs.SendMessageInput {
-	return &sqs.SendMessageInput{
-		QueueUrl:    aws.String(queue),
-		MessageBody: aws.String(body),
 	}
 }
