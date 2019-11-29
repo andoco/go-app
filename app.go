@@ -14,7 +14,7 @@ type App struct {
 	name        string
 	httpServers []*httpState
 	sqsWorkers  []*sqsWorkerState
-	wg          sync.WaitGroup
+	wg          *sync.WaitGroup
 }
 
 type httpState struct {
@@ -24,7 +24,7 @@ type httpState struct {
 }
 
 func NewApp(name string) *App {
-	return &App{name: name}
+	return &App{name: name, wg: &sync.WaitGroup{}}
 }
 
 func (a App) ReadConfig(c interface{}) error {
