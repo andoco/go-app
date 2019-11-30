@@ -7,6 +7,8 @@ import (
 
 	"github.com/andoco/go-app"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
 )
 
@@ -24,6 +26,15 @@ func main() {
 		fmt.Fprintf(w, "Ok(2) at %v", time.Now())
 	})
 	a.AddHttp(mux2, 8082)
+
+	a.AddPrometheus()
+
+	opsProcessed := promauto.NewCounter(prometheus.CounterOpts{
+		Name: "myapp_processed_ops_total",
+		Help: "The total number of processed events",
+	})
+
+	opsProcessed.Inc()
 
 	a.AddSQSWithConfig(&app.SQSWorkerConfig{Endpoint: "http://localhost:4576", ReceiveQueue: "http://localhost:4576/queue/test-queue"}, func(msg *sqs.Message, logger zerolog.Logger) error {
 		logger.Info().Msg("Handling message")

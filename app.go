@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 )
 
@@ -34,6 +35,12 @@ func NewApp(name string) *App {
 
 func (a App) ReadConfig(c interface{}) error {
 	return ReadEnvConfig(a.name, c)
+}
+
+func (a *App) AddPrometheus() {
+	promMux := http.NewServeMux()
+	promMux.Handle("/metrics", promhttp.Handler())
+	a.AddHttp(promMux, 2112)
 }
 
 func (a *App) AddHttp(handler http.Handler, port int) {
