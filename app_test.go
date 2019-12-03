@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewApp(t *testing.T) {
@@ -42,9 +43,19 @@ func TestAddHttp(t *testing.T) {
 
 func TestAddPrometheus(t *testing.T) {
 	app := NewApp("MyApp")
-	app.AddPrometheus()
+	app.AddPrometheus("/metrics", 9090)
 
 	assert.Len(t, app.httpServers, 1)
+}
+
+func TestAutoAddPrometheus(t *testing.T) {
+	os.Setenv("MYAPP_PROMETHEUS_ENABLED", "true")
+	os.Setenv("MYAPP_PROMETHEUS_PORT", "9999")
+
+	app := NewApp("MyApp")
+
+	require.Len(t, app.httpServers, 1)
+	assert.Equal(t, 9999, app.httpServers[0].httpPort)
 }
 
 func TestNewHTTPServer(t *testing.T) {

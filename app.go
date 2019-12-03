@@ -22,6 +22,16 @@ type App struct {
 	logger      zerolog.Logger
 }
 
+type AppConfig struct {
+	Prometheus PrometheusConfig
+}
+
+type PrometheusConfig struct {
+	Enabled bool
+	Path    string `default:"/metrics"`
+	Port    int    `default:"9090"`
+}
+
 type httpState struct {
 	httpHandler http.Handler
 	httpPort    int
@@ -30,17 +40,29 @@ type httpState struct {
 
 func NewApp(name string) *App {
 	logger := zerolog.New(os.Stderr).With().Str("appName", name).Logger()
-	return &App{name: name, wg: &sync.WaitGroup{}, logger: logger}
+	app := &App{name: name, wg: &sync.WaitGroup{}, logger: logger}
+
+	appCfg := &AppConfig{}
+	if err := app.ReadConfig(appCfg); err != nil {
+		panic(err)
+	}
+
+	if appCfg.Prometheus.Enabled {
+		app.AddPrometheus(appCfg.Prometheus.Path, appCfg.Prometheus.Port)
+	}
+
+	return app
 }
 
-func (a App) ReadConfig(c interface{}) error {
-	return ReadEnvConfig(a.name, c)
+func (a App) ReadConfig(c interface{}, name ...string) error {
+	name = append([]string{a.name}, name...)
+	return ReadEnvConfig(BuildEnvConfigName(name...), c)
 }
 
-func (a *App) AddPrometheus() {
+func (a *App) AddPrometheus(path string, port int) {
 	promMux := http.NewServeMux()
-	promMux.Handle("/metrics", promhttp.Handler())
-	a.AddHttp(promMux, 2112)
+	promMux.Handle(path, promhttp.Handler())
+	a.AddHttp(promMux, port)
 }
 
 func (a *App) AddHttp(handler http.Handler, port int) {

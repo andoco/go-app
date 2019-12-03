@@ -18,3 +18,7 @@ func TestReadEnvConfig(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "Foo", c.Foo)
 }
+
+func TestBuildEnvConfigName(t *testing.T) {
+	assert.Equal(t, "MYAPP_FOO_BAR", BuildEnvConfigName("MyApp", "foo", "BAR"))
+}
