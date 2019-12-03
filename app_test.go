@@ -40,6 +40,13 @@ func TestAddHttp(t *testing.T) {
 	assert.Equal(t, 8080, app.httpServers[0].httpPort, "Wrong port")
 }
 
+func TestAddPrometheus(t *testing.T) {
+	app := NewApp("MyApp")
+	app.AddPrometheus()
+
+	assert.Len(t, app.httpServers, 1)
+}
+
 func TestNewHTTPServer(t *testing.T) {
 	handler := http.NewServeMux()
 	server := newHttpServer(handler, 8081)
