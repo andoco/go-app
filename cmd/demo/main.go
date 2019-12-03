@@ -46,6 +46,5 @@ func main() {
 		return nil
 	})
 
-	fmt.Println("Press CTRL+c to exit")
 	a.Start()
 }
