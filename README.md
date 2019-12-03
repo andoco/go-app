@@ -1,4 +1,4 @@
-https://github.com/andoco/go-app/workflows/CI/badge.svg
+![](https://github.com/andoco/go-app/workflows/CI/badge.svg)
 
 ## Introduction
 
