@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -64,4 +65,23 @@ func TestNewHTTPServer(t *testing.T) {
 
 	assert.Equal(t, handler, server.Handler, "Handler not set")
 	assert.Equal(t, ":8081", server.Addr, "Addr not set")
+}
+
+func TestNewLogger(t *testing.T) {
+	testCases := []struct {
+		name        string
+		env         string
+		outLogLevel zerolog.Level
+	}{
+		{"dev", "dev", zerolog.DebugLevel},
+		{"staging", "staging", zerolog.WarnLevel},
+		{"production", "production", zerolog.WarnLevel},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logger := newLogger("MyApp", tc.env)
+			assert.Equal(t, tc.outLogLevel, logger.GetLevel())
+		})
+	}
 }

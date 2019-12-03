@@ -23,6 +23,7 @@ type App struct {
 }
 
 type AppConfig struct {
+	Env        string `default:"dev"`
 	Prometheus PrometheusConfig
 }
 
@@ -39,13 +40,14 @@ type httpState struct {
 }
 
 func NewApp(name string) *App {
-	logger := zerolog.New(os.Stderr).With().Str("appName", name).Logger()
-	app := &App{name: name, wg: &sync.WaitGroup{}, logger: logger}
+	app := &App{name: name, wg: &sync.WaitGroup{}}
 
 	appCfg := &AppConfig{}
 	if err := app.ReadConfig(appCfg); err != nil {
 		panic(err)
 	}
+
+	app.logger = newLogger(app.name, appCfg.Env)
 
 	if appCfg.Prometheus.Enabled {
 		app.AddPrometheus(appCfg.Prometheus.Path, appCfg.Prometheus.Port)
@@ -133,4 +135,18 @@ func (a *App) runListenAndServe(s *httpState) {
 		}
 		a.logger.Debug().Msg("HTTP server shutdown")
 	}()
+}
+
+func newLogger(name string, env string) zerolog.Logger {
+	var logLevel zerolog.Level
+	switch env {
+	case "dev":
+		logLevel = zerolog.DebugLevel
+	default:
+		logLevel = zerolog.WarnLevel
+	}
+
+	logger := zerolog.New(os.Stderr).Level(logLevel).With().Str("appName", name).Logger()
+
+	return logger
 }
