@@ -51,7 +51,7 @@ func TestAutoAddPrometheus(t *testing.T) {
 	assert.Equal(t, 9999, app.httpServers[0].httpPort)
 }
 
-func TestNewLogger(t *testing.T) {
+func TestLogLevelForEnv(t *testing.T) {
 	testCases := []struct {
 		name        string
 		env         string
@@ -64,8 +64,8 @@ func TestNewLogger(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			logger := newLogger("MyApp", tc.env)
-			assert.Equal(t, tc.outLogLevel, logger.GetLevel())
+			logLevel := logLevelForEnv(tc.env)
+			assert.Equal(t, tc.outLogLevel, logLevel)
 		})
 	}
 }

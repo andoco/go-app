@@ -34,20 +34,24 @@ type PrometheusConfig struct {
 }
 
 func NewApp(name string) *App {
-	app := &App{name: name, wg: &sync.WaitGroup{}}
+	app := &App{
+		name:   name,
+		wg:     &sync.WaitGroup{},
+		logger: newLogger(name),
+	}
 
 	if _, err := os.Stat(".env"); err == nil {
 		if err := godotenv.Load(); err != nil {
-			panic("Error loading .env file")
+			app.logger.Fatal().Err(err).Msg("Error loading .env file")
 		}
 	}
 
 	appCfg := &AppConfig{}
 	if err := app.ReadConfig(appCfg); err != nil {
-		panic(err)
+		app.logger.Fatal().Err(err).Msg("Error reading core app configuration")
 	}
 
-	app.logger = newLogger(app.name, appCfg.Env)
+	app.logger = loggerForEnv(app.logger, appCfg.Env)
 
 	if appCfg.Prometheus.Enabled {
 		app.AddPrometheus(appCfg.Prometheus.Path, appCfg.Prometheus.Port)
@@ -99,8 +103,13 @@ func (a App) registerStopOnSigTerm() {
 	}()
 }
 
-func newLogger(name string, env string) zerolog.Logger {
+func newLogger(name string) zerolog.Logger {
+	return zerolog.New(os.Stderr).With().Str("appName", name).Logger()
+}
+
+func logLevelForEnv(env string) zerolog.Level {
 	var logLevel zerolog.Level
+
 	switch env {
 	case "dev":
 		logLevel = zerolog.DebugLevel
@@ -108,7 +117,10 @@ func newLogger(name string, env string) zerolog.Logger {
 		logLevel = zerolog.WarnLevel
 	}
 
-	logger := zerolog.New(os.Stderr).Level(logLevel).With().Str("appName", name).Logger()
+	return logLevel
+}
 
-	return logger
+func loggerForEnv(logger zerolog.Logger, env string) zerolog.Logger {
+	logLevel := logLevelForEnv(env)
+	return logger.Level(logLevel)
 }
