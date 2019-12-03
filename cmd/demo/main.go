@@ -27,7 +27,7 @@ func main() {
 	})
 	a.AddHttp(mux2, 8082)
 
-	a.AddPrometheus()
+	a.AddPrometheus("/metrics", 9090)
 
 	opsProcessed := promauto.NewCounter(prometheus.CounterOpts{
 		Name: "myapp_processed_ops_total",
