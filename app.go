@@ -62,12 +62,12 @@ func (a *App) AddPrometheus(path string, port int) {
 func (a *App) Start() {
 	a.logger.Debug().Msg("Starting app")
 	ctx := context.Background()
-	ctx2, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx)
 
 	a.cancel = cancel
 
-	a.startHttpServers(ctx2)
-	a.startSQSWorkers(ctx2)
+	a.startHttpServers(ctx)
+	a.startSQSWorkers(ctx)
 
 	a.registerStopOnSigTerm()
 	a.wg.Wait()
