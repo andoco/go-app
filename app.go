@@ -2,8 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,12 +29,6 @@ type PrometheusConfig struct {
 	Enabled bool
 	Path    string `default:"/metrics"`
 	Port    int    `default:"9090"`
-}
-
-type httpState struct {
-	httpHandler http.Handler
-	httpPort    int
-	httpServer  *http.Server
 }
 
 func NewApp(name string) *App {
@@ -67,15 +59,6 @@ func (a *App) AddPrometheus(path string, port int) {
 	a.AddHttp(promMux, port)
 }
 
-func (a *App) AddHttp(handler http.Handler, port int) {
-	s := &httpState{
-		httpHandler: handler,
-		httpPort:    port,
-	}
-
-	a.httpServers = append(a.httpServers, s)
-}
-
 func (a *App) Start() {
 	a.logger.Debug().Msg("Starting app")
 	ctx := context.Background()
@@ -83,12 +66,7 @@ func (a *App) Start() {
 
 	a.cancel = cancel
 
-	for _, s := range a.httpServers {
-		s.httpServer = newHttpServer(s.httpHandler, s.httpPort)
-		a.runListenAndServe(s)
-		a.wg.Add(1)
-	}
-
+	a.startHttpServers(ctx2)
 	a.startSQSWorkers(ctx2)
 
 	a.registerStopOnSigTerm()
@@ -98,11 +76,7 @@ func (a *App) Start() {
 func (a App) Stop() {
 	a.logger.Debug().Msg("Stopping app")
 
-	for _, s := range a.httpServers {
-		if err := s.httpServer.Shutdown(context.TODO()); err != nil {
-			panic(err)
-		}
-	}
+	a.stopHttpServers(context.TODO())
 
 	a.cancel()
 }
@@ -114,26 +88,6 @@ func (a App) registerStopOnSigTerm() {
 	go func() {
 		<-c
 		a.Stop()
-	}()
-}
-
-func newHttpServer(handler http.Handler, port int) *http.Server {
-	return &http.Server{
-		Handler: handler,
-		Addr:    fmt.Sprintf(":%d", port),
-	}
-}
-
-func (a *App) runListenAndServe(s *httpState) {
-	go func() {
-		defer a.wg.Done()
-
-		if err := s.httpServer.ListenAndServe(); err != nil {
-			if !errors.Is(err, http.ErrServerClosed) {
-				panic(fmt.Errorf("server did not exit gracefully: %w", err))
-			}
-		}
-		a.logger.Debug().Msg("HTTP server shutdown")
 	}()
 }
 
