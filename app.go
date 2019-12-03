@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"sync"
 
+	"github.com/joho/godotenv"
+
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 )
@@ -33,6 +35,12 @@ type PrometheusConfig struct {
 
 func NewApp(name string) *App {
 	app := &App{name: name, wg: &sync.WaitGroup{}}
+
+	if _, err := os.Stat(".env"); err == nil {
+		if err := godotenv.Load(); err != nil {
+			panic("Error loading .env file")
+		}
+	}
 
 	appCfg := &AppConfig{}
 	if err := app.ReadConfig(appCfg); err != nil {
