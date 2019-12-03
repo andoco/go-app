@@ -1,3 +1,5 @@
+https://github.com/andoco/go-app/workflows/CI/badge.svg
+
 ## Introduction
 
 Minimal Go framework for microservice applications running in [AWS](https://aws.amazon.com) supporting:
