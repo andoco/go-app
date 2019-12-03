@@ -1,7 +1,6 @@
 package app
 
 import (
-	"net/http"
 	"os"
 	"testing"
 
@@ -25,21 +24,12 @@ func TestReadConfig(t *testing.T) {
 	}{}
 
 	os.Setenv("MYAPP_FOO", "Foo")
+	defer os.Unsetenv("MYAPP_FOO")
 
 	app := NewApp("MyApp")
 	app.ReadConfig(c)
 
 	assert.Equal(t, "Foo", c.Foo)
-}
-
-func TestAddHttp(t *testing.T) {
-	app := NewApp("MyApp")
-	handler := http.NewServeMux()
-	app.AddHttp(handler, 8080)
-
-	assert.Len(t, app.httpServers, 1)
-	assert.Equal(t, handler, app.httpServers[0].httpHandler, "Handler not added")
-	assert.Equal(t, 8080, app.httpServers[0].httpPort, "Wrong port")
 }
 
 func TestAddPrometheus(t *testing.T) {
@@ -51,20 +41,14 @@ func TestAddPrometheus(t *testing.T) {
 
 func TestAutoAddPrometheus(t *testing.T) {
 	os.Setenv("MYAPP_PROMETHEUS_ENABLED", "true")
+	defer os.Unsetenv("MYAPP_PROMETHEUS_ENABLED")
 	os.Setenv("MYAPP_PROMETHEUS_PORT", "9999")
+	defer os.Unsetenv("MYAPP_PROMETHEUS_PORT")
 
 	app := NewApp("MyApp")
 
 	require.Len(t, app.httpServers, 1)
 	assert.Equal(t, 9999, app.httpServers[0].httpPort)
-}
-
-func TestNewHTTPServer(t *testing.T) {
-	handler := http.NewServeMux()
-	server := newHttpServer(handler, 8081)
-
-	assert.Equal(t, handler, server.Handler, "Handler not set")
-	assert.Equal(t, ":8081", server.Addr, "Addr not set")
 }
 
 func TestNewLogger(t *testing.T) {

@@ -11,7 +11,9 @@ import (
 
 func TestAddSQS(t *testing.T) {
 	os.Setenv("MYAPP_FOO_ENDPOINT", "test-endpoint")
+	defer os.Unsetenv("MYAPP_FOO_ENDPOINT")
 	os.Setenv("MYAPP_FOO_RECEIVEQUEUE", "test-queue")
+	defer os.Unsetenv("MYAPP_FOO_RECEIVEQUEUE")
 
 	app := NewApp("MyApp")
 	app.AddSQS("Foo", func(_ *sqs.Message, _ zerolog.Logger) error { return nil })
