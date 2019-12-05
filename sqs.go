@@ -24,7 +24,15 @@ type SQSWorkerConfig struct {
 	ReceiveQueue string
 }
 
-type MsgHandler func(msg *sqs.Message, logger zerolog.Logger) error
+type MsgHandler interface {
+	Process(msg *sqs.Message, logger zerolog.Logger) error
+}
+
+type MsgHandlerFunc func(msg *sqs.Message, logger zerolog.Logger) error
+
+func (f MsgHandlerFunc) Process(msg *sqs.Message, logger zerolog.Logger) error {
+	return f(msg, logger)
+}
 
 func (a *App) AddSQS(prefix string, handler MsgHandler) {
 	c := &SQSWorkerConfig{}
@@ -88,7 +96,7 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 			for _, msg := range messages {
 				logger := state.logger.With().Str("messageId", *msg.MessageId).Logger()
 
-				if err := state.handler(msg, logger); err != nil {
+				if err := state.handler.Process(msg, logger); err != nil {
 					logger.Error().Err(err).Msg("Failed to handle message")
 					continue
 				}

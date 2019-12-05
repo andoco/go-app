@@ -36,15 +36,13 @@ func main() {
 
 	opsProcessed.Inc()
 
-	a.AddSQSWithConfig(&app.SQSWorkerConfig{Endpoint: "http://localhost:4576", ReceiveQueue: "http://localhost:4576/queue/test-queue"}, func(msg *sqs.Message, logger zerolog.Logger) error {
+	msgRouter := app.NewMsgRouter()
+	msgRouter.HandleFunc("foo", func(msg *sqs.Message, logger zerolog.Logger) error {
 		logger.Info().Msg("Handling message")
 		return nil
 	})
 
-	a.AddSQSWithConfig(&app.SQSWorkerConfig{Endpoint: "http://localhost:4576", ReceiveQueue: "http://localhost:4576/queue/test-queue-2"}, func(msg *sqs.Message, logger zerolog.Logger) error {
-		logger.Info().Msg("Handling message")
-		return nil
-	})
+	a.AddSQSWithConfig(&app.SQSWorkerConfig{Endpoint: "http://localhost:4576", ReceiveQueue: "http://localhost:4576/queue/test-queue"}, msgRouter)
 
 	a.Start()
 }

@@ -97,6 +97,9 @@ func newReceiveMessageInput(queue string, maxNumMessages int, waitTimeSeconds in
 		QueueUrl:            aws.String(queue),
 		MaxNumberOfMessages: aws.Int64(int64(maxNumMessages)),
 		WaitTimeSeconds:     aws.Int64(int64(waitTimeSeconds)),
+		MessageAttributeNames: aws.StringSlice([]string{
+			"msgType",
+		}),
 	}
 }
 
