@@ -15,6 +15,7 @@ func TestNewReceiveMessageInput(t *testing.T) {
 	assert.Equal(t, aws.String("test-queue"), rmi.QueueUrl)
 	assert.Equal(t, aws.Int64(10), rmi.WaitTimeSeconds)
 	assert.Equal(t, aws.Int64(1), rmi.MaxNumberOfMessages)
+	assert.Contains(t, rmi.MessageAttributeNames, aws.String("msgType"))
 }
 
 func TestNewDeleteMessageInput(t *testing.T) {
