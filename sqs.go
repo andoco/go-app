@@ -29,7 +29,7 @@ type MsgHandler func(msg *sqs.Message, logger zerolog.Logger) error
 
 func (a *App) AddSQS(prefix string, handler MsgHandler) {
 	c := &SQSWorkerConfig{}
-	if err := ReadEnvConfig(fmt.Sprintf("%s_%s", a.name, prefix), c); err != nil {
+	if err := ReadEnvConfig(BuildEnvConfigName(a.name, prefix), c); err != nil {
 		a.logger.Fatal().Err(err).Str("prefix", prefix).Msg("Cannot read configuration")
 	}
 
