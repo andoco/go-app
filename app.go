@@ -17,6 +17,7 @@ type App struct {
 	name        string
 	httpServers []*httpState
 	sqsWorkers  []*sqsWorkerState
+	tasks       []*taskState
 	wg          *sync.WaitGroup
 	cancel      context.CancelFunc
 	logger      zerolog.Logger
@@ -80,6 +81,7 @@ func (a *App) Start() {
 
 	a.startHttpServers(ctx)
 	a.startSQSWorkers(ctx)
+	a.startTasks(ctx)
 
 	a.registerStopOnSigTerm()
 	a.wg.Wait()
