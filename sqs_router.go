@@ -3,10 +3,8 @@ package app
 import (
 	"errors"
 
-	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/rs/zerolog"
 )
 
 var (
@@ -40,27 +38,24 @@ func (r *MsgRouter) HandleFunc(msgType string, handler MsgHandlerFunc) {
 
 // Dispatch will pass msg to the registered handler for the
 // message's msgType.
-func (r MsgRouter) Process(msg *sqs.Message, logger zerolog.Logger) error {
-	logger.Debug().Msg("Routing message")
+func (r MsgRouter) Process(msg *MsgContext) error {
+	msg.Logger.Debug().Msg("Routing message")
 
-	msgTypeAttr, ok := msg.MessageAttributes["msgType"]
-	if !ok {
+	if msg.MsgType == "" {
 		return NoMsgTypeErr
 	}
 
-	msgType := *msgTypeAttr.StringValue
+	msg.Logger = msg.Logger.With().Str("msgType", msg.MsgType).Logger()
+	msg.Logger.Debug().Msg("Found msgType")
 
-	logger = logger.With().Str("msgType", msgType).Logger()
-	logger.Debug().Msg("Found msgType")
-
-	h, ok := r.routes[msgType]
+	h, ok := r.routes[msg.MsgType]
 	if !ok {
 		return nil
 	}
 
-	logger.Debug().Msg("Processing message")
+	msg.Logger.Debug().Msg("Processing message")
 
-	msgRouted.With(prometheus.Labels{"msgType": msgType}).Inc()
+	msgRouted.With(prometheus.Labels{"msgType": msg.MsgType}).Inc()
 
-	return h.Process(msg, logger)
+	return h.Process(msg)
 }

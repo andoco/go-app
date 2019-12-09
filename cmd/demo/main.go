@@ -6,10 +6,8 @@ import (
 	"time"
 
 	"github.com/andoco/go-app"
-	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/rs/zerolog"
 )
 
 func main() {
@@ -37,8 +35,8 @@ func main() {
 	opsProcessed.Inc()
 
 	msgRouter := app.NewMsgRouter()
-	msgRouter.HandleFunc("foo", func(msg *sqs.Message, logger zerolog.Logger) error {
-		logger.Info().Msg("Handling message")
+	msgRouter.HandleFunc("foo", func(msg *app.MsgContext) error {
+		msg.Logger.Info().Msg("Handling message")
 		return nil
 	})
 

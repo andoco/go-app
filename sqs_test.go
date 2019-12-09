@@ -4,7 +4,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddSQS(t *testing.T) {
@@ -34,4 +38,15 @@ func TestAddSQSWithConfig(t *testing.T) {
 	assert.Equal(t, "test-endpoint", app.sqsWorkers[0].endpoint)
 	assert.Equal(t, "test-queue", app.sqsWorkers[0].receiveQueue)
 	assert.NotNil(t, app.sqsWorkers[0].handler)
+}
+
+func TestNewMessageContext(t *testing.T) {
+	msg := &sqs.Message{}
+	msg.SetMessageAttributes(map[string]*sqs.MessageAttributeValue{"msgType": &sqs.MessageAttributeValue{StringValue: aws.String("foo")}})
+
+	msgCtx := newMessageContext(msg, zerolog.New(os.Stderr))
+
+	require.NotNil(t, msgCtx, "message context nil")
+	assert.NotNil(t, msgCtx.Msg, "foo")
+	assert.Equal(t, "foo", msgCtx.MsgType, "wrong msgType")
 }

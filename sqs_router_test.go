@@ -30,11 +30,11 @@ func TestMsgRouterProcess(t *testing.T) {
 	msgType := "foo"
 	otherMsgType := "bar"
 
-	testCases := []struct{
-		name string
-		msgType *string
+	testCases := []struct {
+		name       string
+		msgType    *string
 		outHandled bool
-		outErr error
+		outErr     error
 	}{
 		{name: "no msgType", msgType: nil, outHandled: false, outErr: NoMsgTypeErr},
 		{name: "matching msgType", msgType: &msgType, outHandled: true, outErr: nil},
@@ -46,17 +46,19 @@ func TestMsgRouterProcess(t *testing.T) {
 			mr := NewMsgRouter()
 
 			var handled bool
-			mr.HandleFunc(msgType, func(msg *sqs.Message, logger zerolog.Logger) error {
+			mr.HandleFunc(msgType, func(msg *MsgContext) error {
 				handled = true
 				return nil
 			})
 
 			msg := &sqs.Message{}
 			if tc.msgType != nil {
-				msg.SetMessageAttributes(map[string]*sqs.MessageAttributeValue{"msgType":&sqs.MessageAttributeValue{StringValue: tc.msgType}})
+				msg.SetMessageAttributes(map[string]*sqs.MessageAttributeValue{"msgType": &sqs.MessageAttributeValue{StringValue: tc.msgType}})
 			}
 
-			err := mr.Process(msg, zerolog.New(nil))
+			msgCtx := newMessageContext(msg, zerolog.New(nil))
+
+			err := mr.Process(msgCtx)
 
 			if tc.outErr == nil {
 				require.Nil(t, err, "Process returned error")
