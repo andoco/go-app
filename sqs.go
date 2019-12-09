@@ -7,7 +7,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
+)
+
+var (
+	msgReceived = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sf_go_app_sqs_msg_received_total",
+		Help: "The total number of SQS messages received",
+	}, []string{"queue"})
 )
 
 type sqsWorkerState struct {
@@ -92,6 +101,8 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 			}
 
 			state.logger.Debug().Int("numMessages", len(messages)).Msg("Received messages")
+
+			msgReceived.With(prometheus.Labels{"queue": state.receiveQueue}).Add(float64(len(messages)))
 
 			for _, msg := range messages {
 				logger := state.logger.With().Str("messageId", *msg.MessageId).Logger()

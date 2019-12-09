@@ -2,12 +2,20 @@ package app
 
 import (
 	"errors"
+
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
 )
 
 var (
 	NoMsgTypeErr = errors.New("no msgType attribute found on message")
+
+	msgRouted = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sf_go_app_sqs_msg_routed_total",
+		Help: "The total number of SQS messages routed to a handler",
+	}, []string{"msgType"})
 )
 
 // MsgRouter handles routing messages to handlers based
@@ -35,7 +43,7 @@ func (r *MsgRouter) HandleFunc(msgType string, handler MsgHandlerFunc) {
 func (r MsgRouter) Process(msg *sqs.Message, logger zerolog.Logger) error {
 	logger.Debug().Msg("Routing message")
 
-	msgTypeAttr, ok := msg.MessageAttributes["msgType"];
+	msgTypeAttr, ok := msg.MessageAttributes["msgType"]
 	if !ok {
 		return NoMsgTypeErr
 	}
@@ -51,6 +59,8 @@ func (r MsgRouter) Process(msg *sqs.Message, logger zerolog.Logger) error {
 	}
 
 	logger.Debug().Msg("Processing message")
+
+	msgRouted.With(prometheus.Labels{"msgType": msgType}).Inc()
 
 	return h.Process(msg, logger)
 }
