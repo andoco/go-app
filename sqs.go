@@ -17,6 +17,11 @@ var (
 		Name: "sf_go_app_sqs_msg_received_total",
 		Help: "The total number of SQS messages received",
 	}, []string{"queue"})
+
+	msgDeleted = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sf_go_app_sqs_msg_deleted_total",
+		Help: "The total number of SQS messages deleted",
+	}, []string{"queue"})
 )
 
 type sqsWorkerState struct {
@@ -116,6 +121,8 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 					logger.Error().Err(err).Msg("Failed to delete message")
 					continue
 				}
+
+				msgDeleted.With(prometheus.Labels{"queue": state.receiveQueue}).Inc()
 			}
 		}
 	}
