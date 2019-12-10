@@ -56,7 +56,7 @@ func TestMsgRouterProcess(t *testing.T) {
 				msg.SetMessageAttributes(map[string]*sqs.MessageAttributeValue{"msgType": &sqs.MessageAttributeValue{StringValue: tc.msgType}})
 			}
 
-			msgCtx := newMessageContext(msg, zerolog.New(nil))
+			msgCtx := newMessageContext(msg, "msgType", zerolog.New(nil))
 
 			err := mr.Process(msgCtx)
 

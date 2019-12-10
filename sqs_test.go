@@ -23,6 +23,7 @@ func TestAddSQS(t *testing.T) {
 	assert.Len(t, app.sqsWorkers, 1)
 	assert.Equal(t, "test-endpoint", app.sqsWorkers[0].endpoint)
 	assert.Equal(t, "test-queue", app.sqsWorkers[0].receiveQueue)
+	assert.Equal(t, "msgType", app.sqsWorkers[0].msgTypeKey)
 	assert.NotNil(t, app.sqsWorkers[0].handler)
 }
 
@@ -31,22 +32,30 @@ func TestAddSQSWithConfig(t *testing.T) {
 	c := &SQSWorkerConfig{
 		Endpoint:     "test-endpoint",
 		ReceiveQueue: "test-queue",
+		MsgTypeKey:   "msgType",
 	}
 	app.AddSQSWithConfig(c, NewMsgRouter())
 
 	assert.Len(t, app.sqsWorkers, 1)
 	assert.Equal(t, "test-endpoint", app.sqsWorkers[0].endpoint)
 	assert.Equal(t, "test-queue", app.sqsWorkers[0].receiveQueue)
+	assert.Equal(t, "msgType", app.sqsWorkers[0].msgTypeKey)
 	assert.NotNil(t, app.sqsWorkers[0].handler)
+}
+
+func TestNewSQSWorkerConfig(t *testing.T) {
+	c := NewSQSWorkerConfig()
+
+	assert.Equal(t, "msgType", c.MsgTypeKey)
 }
 
 func TestNewMessageContext(t *testing.T) {
 	msg := &sqs.Message{}
 	msg.SetMessageAttributes(map[string]*sqs.MessageAttributeValue{"msgType": &sqs.MessageAttributeValue{StringValue: aws.String("foo")}})
 
-	msgCtx := newMessageContext(msg, zerolog.New(os.Stderr))
+	msgCtx := newMessageContext(msg, "msgType", zerolog.New(os.Stderr))
 
 	require.NotNil(t, msgCtx, "message context nil")
-	assert.NotNil(t, msgCtx.Msg, "foo")
-	assert.Equal(t, "foo", msgCtx.MsgType, "wrong msgType")
+	assert.NotNil(t, msgCtx.Msg, "message not set")
+	assert.Equal(t, "foo", *msgCtx.MsgType, "wrong msgType")
 }

@@ -27,6 +27,7 @@ var (
 type sqsWorkerState struct {
 	endpoint     string
 	receiveQueue string
+	msgTypeKey   string
 	handler      MsgHandler
 	queue        *Queue
 	wg           *sync.WaitGroup
@@ -36,11 +37,18 @@ type sqsWorkerState struct {
 type SQSWorkerConfig struct {
 	Endpoint     string
 	ReceiveQueue string
+	MsgTypeKey   string
+}
+
+func NewSQSWorkerConfig() *SQSWorkerConfig {
+	return &SQSWorkerConfig{
+		MsgTypeKey: "msgType",
+	}
 }
 
 type MsgContext struct {
 	Msg     *sqs.Message
-	MsgType string
+	MsgType *string
 	Logger  zerolog.Logger
 }
 
@@ -55,7 +63,7 @@ func (f MsgHandlerFunc) Process(msg *MsgContext) error {
 }
 
 func (a *App) AddSQS(prefix string, handler MsgHandler) {
-	c := &SQSWorkerConfig{}
+	c := NewSQSWorkerConfig()
 	if err := ReadEnvConfig(BuildEnvConfigName(a.name, prefix), c); err != nil {
 		a.logger.Fatal().Err(err).Str("prefix", prefix).Msg("Cannot read configuration")
 	}
@@ -68,6 +76,7 @@ func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 		wg:           a.wg,
 		endpoint:     config.Endpoint,
 		receiveQueue: config.ReceiveQueue,
+		msgTypeKey:   config.MsgTypeKey,
 		handler:      handler,
 		logger:       a.logger.With().Str("queue", config.ReceiveQueue).Logger(),
 	}
@@ -95,10 +104,10 @@ func setupQueue(state *sqsWorkerState) {
 	state.queue = queue
 }
 
-func newMessageContext(msg *sqs.Message, logger zerolog.Logger) *MsgContext {
-	var msgType string
-	if msgTypeAttrib, ok := msg.MessageAttributes["msgType"]; ok {
-		msgType = *msgTypeAttrib.StringValue
+func newMessageContext(msg *sqs.Message, msgTypeKey string, logger zerolog.Logger) *MsgContext {
+	var msgType *string
+	if msgTypeAttrib, ok := msg.MessageAttributes[msgTypeKey]; ok {
+		msgType = msgTypeAttrib.StringValue
 	}
 
 	return &MsgContext{
@@ -131,7 +140,7 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 			for _, msg := range messages {
 				logger := state.logger.With().Str("messageId", *msg.MessageId).Logger()
 
-				msgCtx := newMessageContext(msg, logger)
+				msgCtx := newMessageContext(msg, "msgType", logger)
 
 				if err := state.handler.Process(msgCtx); err != nil {
 					logger.Error().Err(err).Msg("Failed to handle message")

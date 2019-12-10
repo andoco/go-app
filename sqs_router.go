@@ -36,26 +36,26 @@ func (r *MsgRouter) HandleFunc(msgType string, handler MsgHandlerFunc) {
 	r.routes[msgType] = handler
 }
 
-// Dispatch will pass msg to the registered handler for the
-// message's msgType.
+// Process will pass msg to the registered handler for the
+// message's message type.
 func (r MsgRouter) Process(msg *MsgContext) error {
 	msg.Logger.Debug().Msg("Routing message")
 
-	if msg.MsgType == "" {
+	if msg.MsgType == nil {
 		return NoMsgTypeErr
 	}
 
-	msg.Logger = msg.Logger.With().Str("msgType", msg.MsgType).Logger()
+	msg.Logger = msg.Logger.With().Str("msgType", *msg.MsgType).Logger()
 	msg.Logger.Debug().Msg("Found msgType")
 
-	h, ok := r.routes[msg.MsgType]
+	h, ok := r.routes[*msg.MsgType]
 	if !ok {
 		return nil
 	}
 
 	msg.Logger.Debug().Msg("Processing message")
 
-	msgRouted.With(prometheus.Labels{"msgType": msg.MsgType}).Inc()
+	msgRouted.With(prometheus.Labels{"msgType": *msg.MsgType}).Inc()
 
 	return h.Process(msg)
 }
