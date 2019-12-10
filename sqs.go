@@ -140,7 +140,7 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 			for _, msg := range messages {
 				logger := state.logger.With().Str("messageId", *msg.MessageId).Logger()
 
-				msgCtx := newMessageContext(msg, "msgType", logger)
+				msgCtx := newMessageContext(msg, state.msgTypeKey, logger)
 
 				if err := state.handler.Process(msgCtx); err != nil {
 					logger.Error().Err(err).Msg("Failed to handle message")
