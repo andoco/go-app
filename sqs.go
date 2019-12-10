@@ -100,7 +100,7 @@ func setupQueue(state *sqsWorkerState) {
 	sess.Config.MergeIn(aws.NewConfig().WithEndpoint(state.endpoint))
 
 	svc := sqs.New(sess)
-	queue := NewQueue(NewQueueConfig(), svc)
+	queue := NewQueue(NewQueueConfig(state.msgTypeKey), svc)
 	state.queue = queue
 }
 

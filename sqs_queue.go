@@ -33,18 +33,20 @@ type Queue struct {
 	svc    *sqs.SQS
 }
 
-func NewQueueConfig() *QueueConfig {
+func NewQueueConfig(msgTypeKey string) *QueueConfig {
 	return &QueueConfig{
-		WaitTime: 20,
+		WaitTime:   20,
+		MsgTypeKey: msgTypeKey,
 	}
 }
 
 type QueueConfig struct {
-	WaitTime int
+	WaitTime   int
+	MsgTypeKey string
 }
 
 func (q Queue) Receive(ctx context.Context, queue string, max int) ([]*sqs.Message, error) {
-	input := newReceiveMessageInput(queue, max, q.config.WaitTime)
+	input := newReceiveMessageInput(queue, max, q.config.WaitTime, q.config.MsgTypeKey)
 
 	output, err := q.svc.ReceiveMessageWithContext(ctx, input)
 	if err != nil {
@@ -92,15 +94,15 @@ func isAwsCancelledError(err error) bool {
 	return false
 }
 
-func newReceiveMessageInput(queue string, maxNumMessages int, waitTimeSeconds int) *sqs.ReceiveMessageInput {
-	return &sqs.ReceiveMessageInput{
-		QueueUrl:            aws.String(queue),
-		MaxNumberOfMessages: aws.Int64(int64(maxNumMessages)),
-		WaitTimeSeconds:     aws.Int64(int64(waitTimeSeconds)),
-		MessageAttributeNames: aws.StringSlice([]string{
-			"msgType",
-		}),
+func newReceiveMessageInput(queue string, maxNumMessages int, waitTimeSeconds int, msgTypeKey string) *sqs.ReceiveMessageInput {
+	input := &sqs.ReceiveMessageInput{
+		QueueUrl:              aws.String(queue),
+		MaxNumberOfMessages:   aws.Int64(int64(maxNumMessages)),
+		WaitTimeSeconds:       aws.Int64(int64(waitTimeSeconds)),
+		MessageAttributeNames: aws.StringSlice([]string{msgTypeKey}),
 	}
+
+	return input
 }
 
 func newDeleteMessageInput(queue string, msg *sqs.Message) *sqs.DeleteMessageInput {

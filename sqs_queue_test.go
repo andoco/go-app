@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewReceiveMessageInput(t *testing.T) {
-	rmi := newReceiveMessageInput("test-queue", 1, 10)
+	rmi := newReceiveMessageInput("test-queue", 1, 10, "msgType")
 
 	assert.NotNil(t, rmi)
 	assert.Equal(t, aws.String("test-queue"), rmi.QueueUrl)
