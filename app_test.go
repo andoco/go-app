@@ -18,6 +18,27 @@ func TestNewApp(t *testing.T) {
 	assert.Equal(t, "MyApp", app.name, "wrong app name")
 }
 
+func TestValidateAppName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		inName   string
+		outValid bool
+	}{
+		{name: "simple", inName: "foo", outValid: true},
+		{name: "camel", inName: "fooBar", outValid: true},
+		{name: "snake", inName: "foo_bar", outValid: false},
+		{name: "kebab", inName: "foo-bar", outValid: false},
+		{name: "spaces", inName: "foo bar", outValid: false},
+		{name: "mixed", inName: "foo-bar_baz blah", outValid: false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.outValid, validateAppName(tc.inName))
+		})
+	}
+}
+
 func TestReadConfig(t *testing.T) {
 	c := &struct {
 		Foo string

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -35,10 +36,16 @@ type PrometheusConfig struct {
 }
 
 func NewApp(name string) *App {
+	logger := newLogger(name)
+
+	if !validateAppName(name) {
+		logger.Fatal().Msg("Invalid app name")
+	}
+
 	app := &App{
 		name:   name,
 		wg:     &sync.WaitGroup{},
-		logger: newLogger(name),
+		logger: logger,
 	}
 
 	if _, err := os.Stat(".env"); err == nil {
@@ -125,4 +132,10 @@ func logLevelForEnv(env string) zerolog.Level {
 func loggerForEnv(logger zerolog.Logger, env string) zerolog.Logger {
 	logLevel := logLevelForEnv(env)
 	return logger.Level(logLevel)
+}
+
+func validateAppName(n string) bool {
+	regex := regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9]+$")
+
+	return regex.MatchString(n)
 }
