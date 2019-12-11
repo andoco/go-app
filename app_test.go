@@ -24,8 +24,12 @@ func TestValidateAppName(t *testing.T) {
 		inName   string
 		outValid bool
 	}{
-		{name: "simple", inName: "foo", outValid: true},
-		{name: "camel", inName: "fooBar", outValid: true},
+		{name: "single camel", inName: "Foo", outValid: true},
+		{name: "two camel", inName: "FooBar", outValid: true},
+		{name: "three camel", inName: "FooBarBaz", outValid: true},
+		{name: "adjacent uppercase", inName: "FBar", outValid: true},
+		{name: "only uppercase", inName: "FOOBAR", outValid: true},
+		{name: "only lowercase", inName: "foo", outValid: false},
 		{name: "snake", inName: "foo_bar", outValid: false},
 		{name: "kebab", inName: "foo-bar", outValid: false},
 		{name: "spaces", inName: "foo bar", outValid: false},

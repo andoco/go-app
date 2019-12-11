@@ -35,6 +35,7 @@ type PrometheusConfig struct {
 	Port    int    `default:"9090"`
 }
 
+// NewApp creates a new App. name is expected to be in leading uppercase camelcase format.
 func NewApp(name string) *App {
 	logger := newLogger(name)
 
@@ -134,8 +135,9 @@ func loggerForEnv(logger zerolog.Logger, env string) zerolog.Logger {
 	return logger.Level(logLevel)
 }
 
+// validateAppName checks if name has leading uppercase camelcase format.
 func validateAppName(n string) bool {
-	regex := regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9]+$")
+	regex := regexp.MustCompile("^(?:[A-Z][A-Za-z]*)+$")
 
 	return regex.MatchString(n)
 }
