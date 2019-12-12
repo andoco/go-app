@@ -13,7 +13,7 @@ var (
 	msgRouted = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "sf_go_app_sqs_msg_routed_total",
 		Help: "The total number of SQS messages routed to a handler",
-	}, []string{"msgType"})
+	}, []string{"msg_type"})
 )
 
 // MsgRouter handles routing messages to handlers based
@@ -55,7 +55,7 @@ func (r MsgRouter) Process(msg *MsgContext) error {
 
 	msg.Logger.Debug().Msg("Processing message")
 
-	msgRouted.With(prometheus.Labels{"msgType": *msg.MsgType}).Inc()
+	msgRouted.With(prometheus.Labels{"msg_type": *msg.MsgType}).Inc()
 
 	return h.Process(msg)
 }
