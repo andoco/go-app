@@ -18,6 +18,16 @@ var (
 		Help: "The total number of SQS messages received",
 	}, []string{"queue"})
 
+	msgProcessed = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sf_go_app_sqs_msg_processed_total",
+		Help: "The total number of SQS messages processed",
+	}, []string{"queue"})
+
+	msgProcessedFailure = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sf_go_app_sqs_msg_processed_failure_total",
+		Help: "The total number of SQS messages that failed to be processed",
+	}, []string{"queue"})
+
 	msgDeleted = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "sf_go_app_sqs_msg_deleted_total",
 		Help: "The total number of SQS messages deleted",
@@ -144,8 +154,11 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 
 				if err := state.handler.Process(msgCtx); err != nil {
 					logger.Error().Err(err).Msg("Failed to handle message")
+					msgProcessedFailure.With(prometheus.Labels{"queue": state.receiveQueue}).Inc()
 					continue
 				}
+
+				msgProcessed.With(prometheus.Labels{"queue": state.receiveQueue}).Inc()
 
 				if err = state.queue.Delete(ctx, msg, state.receiveQueue); err != nil {
 					logger.Error().Err(err).Msg("Failed to delete message")

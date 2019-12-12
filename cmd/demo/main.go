@@ -40,7 +40,7 @@ func main() {
 		return nil
 	})
 
-	a.AddSQSWithConfig(&app.SQSWorkerConfig{Endpoint: "http://localhost:4576", ReceiveQueue: "http://localhost:4576/queue/test-queue"}, msgRouter)
+	a.AddSQSWithConfig(&app.SQSWorkerConfig{Endpoint: "http://localhost:4576", ReceiveQueue: "http://localhost:4576/queue/test-queue", MsgTypeKey: "msgType"}, msgRouter)
 
 	a.Start()
 }
