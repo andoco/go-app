@@ -18,38 +18,13 @@ func TestNewApp(t *testing.T) {
 	assert.Equal(t, "MyApp", app.name, "wrong app name")
 }
 
-func TestValidateAppName(t *testing.T) {
-	testCases := []struct {
-		name     string
-		inName   string
-		outValid bool
-	}{
-		{name: "single camel", inName: "Foo", outValid: true},
-		{name: "two camel", inName: "FooBar", outValid: true},
-		{name: "three camel", inName: "FooBarBaz", outValid: true},
-		{name: "adjacent uppercase", inName: "FBar", outValid: true},
-		{name: "only uppercase", inName: "FOOBAR", outValid: true},
-		{name: "only lowercase", inName: "foo", outValid: false},
-		{name: "snake", inName: "foo_bar", outValid: false},
-		{name: "kebab", inName: "foo-bar", outValid: false},
-		{name: "spaces", inName: "foo bar", outValid: false},
-		{name: "mixed", inName: "foo-bar_baz blah", outValid: false},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.outValid, validateAppName(tc.inName))
-		})
-	}
-}
-
 func TestReadConfig(t *testing.T) {
 	c := &struct {
 		Foo string
 	}{}
 
-	os.Setenv("MYAPP_FOO", "Foo")
-	defer os.Unsetenv("MYAPP_FOO")
+	os.Setenv("MY_APP_FOO", "Foo")
+	defer os.Unsetenv("MY_APP_FOO")
 
 	app := NewApp("MyApp")
 	app.ReadConfig(c)
@@ -65,10 +40,10 @@ func TestAddPrometheus(t *testing.T) {
 }
 
 func TestAutoAddPrometheus(t *testing.T) {
-	os.Setenv("MYAPP_PROMETHEUS_ENABLED", "true")
-	defer os.Unsetenv("MYAPP_PROMETHEUS_ENABLED")
-	os.Setenv("MYAPP_PROMETHEUS_PORT", "9999")
-	defer os.Unsetenv("MYAPP_PROMETHEUS_PORT")
+	os.Setenv("MY_APP_PROMETHEUS_ENABLED", "true")
+	defer os.Unsetenv("MY_APP_PROMETHEUS_ENABLED")
+	os.Setenv("MY_APP_PROMETHEUS_PORT", "9999")
+	defer os.Unsetenv("MY_APP_PROMETHEUS_PORT")
 
 	app := NewApp("MyApp")
 

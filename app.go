@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"regexp"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -35,7 +34,7 @@ type PrometheusConfig struct {
 	Port    int    `default:"9090"`
 }
 
-// NewApp creates a new App. name is expected to be in leading uppercase camelcase format.
+// NewApp creates a new App. name is expected to be in upper camelcase format.
 func NewApp(name string) *App {
 	logger := newLogger(name)
 
@@ -70,7 +69,7 @@ func NewApp(name string) *App {
 }
 
 func (a App) ReadConfig(c interface{}, name ...string) error {
-	name = append([]string{a.name}, name...)
+	name = append(splitUpperCamelCase(a.name), name...)
 	return ReadEnvConfig(BuildEnvConfigName(name...), c)
 }
 
@@ -133,11 +132,4 @@ func logLevelForEnv(env string) zerolog.Level {
 func loggerForEnv(logger zerolog.Logger, env string) zerolog.Logger {
 	logLevel := logLevelForEnv(env)
 	return logger.Level(logLevel)
-}
-
-// validateAppName checks if name has leading uppercase camelcase format.
-func validateAppName(n string) bool {
-	regex := regexp.MustCompile("^(?:[A-Z][A-Za-z]*)+$")
-
-	return regex.MatchString(n)
 }
