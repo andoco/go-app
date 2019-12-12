@@ -16,22 +16,22 @@ var (
 	msgReceived = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "sf_go_app_sqs_msg_received_total",
 		Help: "The total number of SQS messages received",
-	}, []string{"queue"})
+	}, []string{"app", "queue"})
 
 	msgProcessed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "sf_go_app_sqs_msg_processed_total",
 		Help: "The total number of SQS messages processed",
-	}, []string{"queue"})
+	}, []string{"app", "queue"})
 
 	msgProcessedFailure = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "sf_go_app_sqs_msg_processed_failure_total",
 		Help: "The total number of SQS messages that failed to be processed",
-	}, []string{"queue"})
+	}, []string{"app", "queue"})
 
 	msgDeleted = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "sf_go_app_sqs_msg_deleted_total",
 		Help: "The total number of SQS messages deleted",
-	}, []string{"queue"})
+	}, []string{"app", "queue"})
 )
 
 type sqsWorkerState struct {
@@ -98,7 +98,7 @@ func (a *App) startSQSWorkers(ctx context.Context) {
 	for _, ws := range a.sqsWorkers {
 		setupQueue(ws)
 		ws.logger.Debug().Msg("Starting queue worker")
-		go workerLoop(ctx, ws)
+		go workerLoop(ctx, a.name, ws)
 		a.wg.Add(1)
 	}
 }
@@ -127,7 +127,7 @@ func newMessageContext(msg *sqs.Message, msgTypeKey string, logger zerolog.Logge
 	}
 }
 
-func workerLoop(ctx context.Context, state *sqsWorkerState) {
+func workerLoop(ctx context.Context, appName string, state *sqsWorkerState) {
 	defer state.wg.Done()
 
 	for {
@@ -145,7 +145,7 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 
 			state.logger.Debug().Int("numMessages", len(messages)).Msg("Received messages")
 
-			msgReceived.With(prometheus.Labels{"queue": state.receiveQueue}).Add(float64(len(messages)))
+			msgReceived.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Add(float64(len(messages)))
 
 			for _, msg := range messages {
 				logger := state.logger.With().Str("messageId", *msg.MessageId).Logger()
@@ -154,18 +154,18 @@ func workerLoop(ctx context.Context, state *sqsWorkerState) {
 
 				if err := state.handler.Process(msgCtx); err != nil {
 					logger.Error().Err(err).Msg("Failed to handle message")
-					msgProcessedFailure.With(prometheus.Labels{"queue": state.receiveQueue}).Inc()
+					msgProcessedFailure.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
 					continue
 				}
 
-				msgProcessed.With(prometheus.Labels{"queue": state.receiveQueue}).Inc()
+				msgProcessed.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
 
 				if err = state.queue.Delete(ctx, msg, state.receiveQueue); err != nil {
 					logger.Error().Err(err).Msg("Failed to delete message")
 					continue
 				}
 
-				msgDeleted.With(prometheus.Labels{"queue": state.receiveQueue}).Inc()
+				msgDeleted.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
 			}
 		}
 	}
