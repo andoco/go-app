@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	a := app.NewApp("FooDemo")
+	a := app.NewApp(app.NewAppConfig("FooDemo").WithMetrics("foo_demo"))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

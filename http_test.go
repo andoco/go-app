@@ -9,7 +9,7 @@ import (
 )
 
 func TestAddHttp(t *testing.T) {
-	app := NewApp("MyApp")
+	app := NewApp(NewAppConfig("MyApp"))
 	handler := http.NewServeMux()
 	app.AddHttp(handler, 8080)
 

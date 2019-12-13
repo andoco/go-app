@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewMetrics(t *testing.T) {
-	m := NewMetrics("foo_bar")
+	m := NewMetrics(PrometheusConfig{Prefix: "foo_bar"})
 
 	assert.Equal(t, "foo_bar", m.prefix)
 }

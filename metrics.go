@@ -6,9 +6,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func NewMetrics(prefix string) *Metrics {
+type PrometheusConfig struct {
+	Enabled bool
+	Path    string `default:"/metrics"`
+	Port    int    `default:"9090"`
+	Prefix  string
+}
+
+func NewMetrics(config PrometheusConfig) *Metrics {
 	return &Metrics{
-		prefix:   prefix,
+		prefix:   config.Prefix,
 		registry: prometheus.NewRegistry(),
 	}
 }

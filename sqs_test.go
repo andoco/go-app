@@ -17,7 +17,7 @@ func TestAddSQS(t *testing.T) {
 	os.Setenv("MYAPP_FOO_RECEIVEQUEUE", "test-queue")
 	defer os.Unsetenv("MYAPP_FOO_RECEIVEQUEUE")
 
-	app := NewApp("MyApp")
+	app := NewApp(NewAppConfig("MyApp"))
 	app.AddSQS("Foo", NewMsgRouter())
 
 	assert.Len(t, app.sqsWorkers, 1)
@@ -28,7 +28,7 @@ func TestAddSQS(t *testing.T) {
 }
 
 func TestAddSQSWithConfig(t *testing.T) {
-	app := NewApp("MyApp")
+	app := NewApp(NewAppConfig("MyApp"))
 	c := &SQSWorkerConfig{
 		Endpoint:     "test-endpoint",
 		ReceiveQueue: "test-queue",

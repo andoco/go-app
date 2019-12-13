@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -15,7 +14,7 @@ import (
 )
 
 type App struct {
-	name        string
+	config      *AppConfig
 	httpServers []*httpState
 	sqsWorkers  []*sqsWorkerState
 	tasks       []*taskState
@@ -26,53 +25,59 @@ type App struct {
 }
 
 type AppConfig struct {
+	Name       string
 	Env        string `default:"dev"`
 	Prometheus PrometheusConfig
 }
 
-type PrometheusConfig struct {
-	Enabled bool
-	Path    string `default:"/metrics"`
-	Port    int    `default:"9090"`
+func NewAppConfig(name string) *AppConfig {
+	return &AppConfig{Name: name}
+}
+
+func (c AppConfig) WithMetrics(prefix string) *AppConfig {
+	c.Prometheus = PrometheusConfig{
+		Prefix: prefix,
+	}
+
+	return &c
 }
 
 // NewApp creates a new App. name is expected to be in upper camelcase format.
-func NewApp(name string) *App {
-	logger := newLogger(name)
+func NewApp(config *AppConfig) *App {
+	logger := newLogger(config.Name)
 
-	if !validateAppName(name) {
+	if !validateAppName(config.Name) {
 		logger.Fatal().Msg("Invalid app name")
 	}
 
 	app := &App{
-		name:    name,
-		wg:      &sync.WaitGroup{},
-		logger:  logger,
-		Metrics: NewMetrics(strings.ToLower(strings.Join(splitUpperCamelCase(name), "_"))),
+		config: config,
+		wg:     &sync.WaitGroup{},
+		logger: logger,
 	}
 
 	if _, err := os.Stat(".env"); err == nil {
 		if err := godotenv.Load(); err != nil {
-			app.logger.Fatal().Err(err).Msg("Error loading .env file")
+			logger.Fatal().Err(err).Msg("Error loading .env file")
 		}
 	}
 
-	appCfg := &AppConfig{}
-	if err := app.ReadConfig(appCfg); err != nil {
-		app.logger.Fatal().Err(err).Msg("Error reading core app configuration")
+	if err := app.ReadConfig(app.config); err != nil {
+		logger.Fatal().Err(err).Msg("Error reading core app configuration")
 	}
 
-	app.logger = loggerForEnv(app.logger, appCfg.Env)
+	app.logger = loggerForEnv(logger, app.config.Env)
+	app.Metrics = NewMetrics(app.config.Prometheus)
 
-	if appCfg.Prometheus.Enabled {
-		app.AddPrometheus(appCfg.Prometheus.Path, appCfg.Prometheus.Port)
+	if app.config.Prometheus.Enabled {
+		app.AddPrometheus(app.config.Prometheus.Path, app.config.Prometheus.Port)
 	}
 
 	return app
 }
 
 func (a App) ReadConfig(c interface{}, name ...string) error {
-	name = append(splitUpperCamelCase(a.name), name...)
+	name = append(splitUpperCamelCase(a.config.Name), name...)
 	return ReadEnvConfig(BuildEnvConfigName(name...), c)
 }
 

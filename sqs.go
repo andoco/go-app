@@ -59,7 +59,7 @@ func (f MsgHandlerFunc) Process(msg *MsgContext) error {
 
 func (a *App) AddSQS(prefix string, handler MsgHandler) {
 	c := NewSQSWorkerConfig()
-	if err := ReadEnvConfig(BuildEnvConfigName(a.name, prefix), c); err != nil {
+	if err := ReadEnvConfig(BuildEnvConfigName(a.config.Name, prefix), c); err != nil {
 		a.logger.Fatal().Err(err).Str("prefix", prefix).Msg("Cannot read configuration")
 	}
 
@@ -90,7 +90,7 @@ func (a *App) startSQSWorkers(ctx context.Context) {
 	for _, ws := range a.sqsWorkers {
 		setupQueue(ws)
 		ws.logger.Debug().Msg("Starting queue worker")
-		go workerLoop(ctx, a.name, ws)
+		go workerLoop(ctx, a.config.Name, ws)
 		a.wg.Add(1)
 	}
 }

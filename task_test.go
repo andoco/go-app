@@ -12,10 +12,10 @@ import (
 type testTask struct {
 }
 
-func (t testTask) Run(ctx context.Context, logger zerolog.Logger){}
+func (t testTask) Run(ctx context.Context, logger zerolog.Logger) {}
 
 func TestAddTask(t *testing.T) {
-	app := NewApp("MyApp")
+	app := NewApp(NewAppConfig("MyApp"))
 
 	task := &testTask{}
 
@@ -26,9 +26,9 @@ func TestAddTask(t *testing.T) {
 }
 
 func TestAddTaskFunc(t *testing.T) {
-	app := NewApp("MyApp")
+	app := NewApp(NewAppConfig("MyApp"))
 
-	task := func(ctx context.Context, logger zerolog.Logger){}
+	task := func(ctx context.Context, logger zerolog.Logger) {}
 
 	app.AddTaskFunc(task)
 
@@ -36,10 +36,10 @@ func TestAddTaskFunc(t *testing.T) {
 }
 
 func TestStartTasks(t *testing.T) {
-	app := NewApp("MyApp")
+	app := NewApp(NewAppConfig("MyApp"))
 	var ran bool
 
-	app.AddTaskFunc(func(ctx context.Context, logger zerolog.Logger){
+	app.AddTaskFunc(func(ctx context.Context, logger zerolog.Logger) {
 		ran = true
 	})
 
