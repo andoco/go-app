@@ -8,30 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
-)
-
-var (
-	msgReceived = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "sf_go_app_sqs_msg_received_total",
-		Help: "The total number of SQS messages received",
-	}, []string{"app", "queue"})
-
-	msgProcessed = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "sf_go_app_sqs_msg_processed_total",
-		Help: "The total number of SQS messages processed",
-	}, []string{"app", "queue"})
-
-	msgProcessedFailure = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "sf_go_app_sqs_msg_processed_failure_total",
-		Help: "The total number of SQS messages that failed to be processed",
-	}, []string{"app", "queue"})
-
-	msgDeleted = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "sf_go_app_sqs_msg_deleted_total",
-		Help: "The total number of SQS messages deleted",
-	}, []string{"app", "queue"})
 )
 
 type sqsWorkerState struct {
@@ -42,6 +19,14 @@ type sqsWorkerState struct {
 	queue        *Queue
 	wg           *sync.WaitGroup
 	logger       zerolog.Logger
+	metrics      *sqsMetrics
+}
+
+type sqsMetrics struct {
+	msgReceived         *prometheus.CounterVec
+	msgProcessed        *prometheus.CounterVec
+	msgProcessedFailure *prometheus.CounterVec
+	msgDeleted          *prometheus.CounterVec
 }
 
 type SQSWorkerConfig struct {
@@ -89,6 +74,13 @@ func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 		msgTypeKey:   config.MsgTypeKey,
 		handler:      handler,
 		logger:       a.logger.With().Str("queue", config.ReceiveQueue).Logger(),
+	}
+
+	s.metrics = &sqsMetrics{
+		msgReceived:         a.NewCounterVec("sqs_msg_received_total", "The total number of SQS messages received", []string{"app", "queue"}),
+		msgProcessed:        a.NewCounterVec("sqs_msg_processed_total", "The total number of SQS messages processed", []string{"app", "queue"}),
+		msgProcessedFailure: a.NewCounterVec("sqs_msg_processed_failure_total", "The total number of SQS messages that failed to be processed", []string{"app", "queue"}),
+		msgDeleted:          a.NewCounterVec("sqs_msg_deleted_total", "The total number of SQS messages deleted", []string{"app", "queue"}),
 	}
 
 	a.sqsWorkers = append(a.sqsWorkers, s)
@@ -145,7 +137,7 @@ func workerLoop(ctx context.Context, appName string, state *sqsWorkerState) {
 
 			state.logger.Debug().Int("numMessages", len(messages)).Msg("Received messages")
 
-			msgReceived.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Add(float64(len(messages)))
+			state.metrics.msgReceived.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Add(float64(len(messages)))
 
 			for _, msg := range messages {
 				logger := state.logger.With().Str("messageId", *msg.MessageId).Logger()
@@ -154,18 +146,18 @@ func workerLoop(ctx context.Context, appName string, state *sqsWorkerState) {
 
 				if err := state.handler.Process(msgCtx); err != nil {
 					logger.Error().Err(err).Msg("Failed to handle message")
-					msgProcessedFailure.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
+					state.metrics.msgProcessedFailure.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
 					continue
 				}
 
-				msgProcessed.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
+				state.metrics.msgProcessed.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
 
 				if err = state.queue.Delete(ctx, msg, state.receiveQueue); err != nil {
 					logger.Error().Err(err).Msg("Failed to delete message")
 					continue
 				}
 
-				msgDeleted.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
+				state.metrics.msgDeleted.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
 			}
 		}
 	}

@@ -7,11 +7,10 @@ import (
 
 	"github.com/andoco/go-app"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 func main() {
-	a := app.NewApp("Demo")
+	a := app.NewApp("FooDemo")
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -27,16 +26,12 @@ func main() {
 
 	a.AddPrometheus("/metrics", 9090)
 
-	opsProcessed := promauto.NewCounter(prometheus.CounterOpts{
-		Name: "myapp_processed_ops_total",
-		Help: "The total number of processed events",
-	})
-
-	opsProcessed.Inc()
+	fooProcessed := a.NewCounterVec("foo_processed_total", "Total number of processed foos", []string{"bar"})
 
 	msgRouter := app.NewMsgRouter()
 	msgRouter.HandleFunc("foo", func(msg *app.MsgContext) error {
 		msg.Logger.Info().Msg("Handling message")
+		fooProcessed.With(prometheus.Labels{"bar": "baz"}).Inc()
 		return nil
 	})
 
