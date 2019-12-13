@@ -9,6 +9,10 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
+// ReadEnvConfig will read values from environment variables into the
+// matching fields in c. The path argument specifies the names that
+// will become underscore delimited to build the full environment variable
+// name.
 func ReadEnvConfig(c interface{}, path ...string) error {
 	prefix := BuildEnvConfigName(path...)
 	if err := envconfig.Process(prefix, c); err != nil {
