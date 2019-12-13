@@ -15,7 +15,7 @@ type testTask struct {
 func (t testTask) Run(ctx context.Context, logger zerolog.Logger) {}
 
 func TestAddTask(t *testing.T) {
-	app := NewApp(NewAppConfig("MyApp"))
+	app := NewApp(NewAppConfig("MyApp").Build())
 
 	task := &testTask{}
 
@@ -26,7 +26,7 @@ func TestAddTask(t *testing.T) {
 }
 
 func TestAddTaskFunc(t *testing.T) {
-	app := NewApp(NewAppConfig("MyApp"))
+	app := NewApp(NewAppConfig("MyApp").Build())
 
 	task := func(ctx context.Context, logger zerolog.Logger) {}
 
@@ -36,7 +36,7 @@ func TestAddTaskFunc(t *testing.T) {
 }
 
 func TestStartTasks(t *testing.T) {
-	app := NewApp(NewAppConfig("MyApp"))
+	app := NewApp(NewAppConfig("MyApp").Build())
 	var ran bool
 
 	app.AddTaskFunc(func(ctx context.Context, logger zerolog.Logger) {

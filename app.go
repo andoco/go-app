@@ -13,8 +13,9 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// App holds config and state comprising the app.
 type App struct {
-	config      *AppConfig
+	config      AppConfig
 	httpServers []*httpState
 	sqsWorkers  []*sqsWorkerState
 	tasks       []*taskState
@@ -24,26 +25,35 @@ type App struct {
 	Metrics     *Metrics
 }
 
+// AppConfig holds configuration data for the app.
 type AppConfig struct {
 	Name       string
 	Env        string `default:"dev"`
 	Prometheus PrometheusConfig
 }
 
+// NewAppConfig returns a pointer to a new AppConfig.
 func NewAppConfig(name string) *AppConfig {
 	return &AppConfig{Name: name}
 }
 
-func (c AppConfig) WithMetrics(prefix string) *AppConfig {
+// WithMetrics adds Prometheus metrics configuration with prefix being
+// the metric name prefix for any subsequently created metrics.
+func (c AppConfig) WithMetrics(prefix string) AppConfig {
 	c.Prometheus = PrometheusConfig{
 		Prefix: prefix,
 	}
 
-	return &c
+	return c
+}
+
+// Build returns a finalised copy of the working AppConfig instance.
+func (c AppConfig) Build() AppConfig {
+	return c
 }
 
 // NewApp creates a new App. name is expected to be in upper camelcase format.
-func NewApp(config *AppConfig) *App {
+func NewApp(config AppConfig) *App {
 	logger := newLogger(config.Name)
 
 	if !validateAppName(config.Name) {
@@ -62,7 +72,7 @@ func NewApp(config *AppConfig) *App {
 		}
 	}
 
-	if err := app.ReadConfig(app.config); err != nil {
+	if err := app.ReadConfig(&app.config); err != nil {
 		logger.Fatal().Err(err).Msg("Error reading core app configuration")
 	}
 
@@ -76,18 +86,25 @@ func NewApp(config *AppConfig) *App {
 	return app
 }
 
+// ReadConfig will read configuration environment variables into c. The supplied name elements
+// are appended to the app name to form a full environment variable name.
 func (a App) ReadConfig(c interface{}, name ...string) error {
 	splitAppName := splitUpperCamelCase(a.config.Name)
 	path := append(splitAppName, name...)
 	return ReadEnvConfig(c, path...)
 }
 
+// AddPrometheus adds an HTTP server and metrics endpoint to allow collection
+// of Prometheus metrics.
 func (a *App) AddPrometheus(path string, port int) {
 	promMux := http.NewServeMux()
 	promMux.Handle(path, promhttp.InstrumentMetricHandler(a.Metrics.registry, promhttp.HandlerFor(a.Metrics.registry, promhttp.HandlerOpts{})))
 	a.AddHttp(promMux, port)
 }
 
+// Start will start serving or running any added handlers, tasks, etc.
+// The function will block until a call to Stop is made, or an os.Interrupt
+// signal is received.
 func (a *App) Start() {
 	a.logger.Debug().Msg("Starting app")
 	ctx := context.Background()
@@ -103,6 +120,7 @@ func (a *App) Start() {
 	a.wg.Wait()
 }
 
+// Stop will shutdown any running handlers, tasks, etc and exit the app.
 func (a App) Stop() {
 	a.logger.Debug().Msg("Stopping app")
 
