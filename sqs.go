@@ -77,10 +77,10 @@ func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 	}
 
 	s.metrics = &sqsMetrics{
-		msgReceived:         a.NewCounterVec("sqs_msg_received_total", "The total number of SQS messages received", []string{"app", "queue"}),
-		msgProcessed:        a.NewCounterVec("sqs_msg_processed_total", "The total number of SQS messages processed", []string{"app", "queue"}),
-		msgProcessedFailure: a.NewCounterVec("sqs_msg_processed_failure_total", "The total number of SQS messages that failed to be processed", []string{"app", "queue"}),
-		msgDeleted:          a.NewCounterVec("sqs_msg_deleted_total", "The total number of SQS messages deleted", []string{"app", "queue"}),
+		msgReceived:         a.Metrics.NewCounterVec("sqs_msg_received_total", "The total number of SQS messages received", []string{"app", "queue"}),
+		msgProcessed:        a.Metrics.NewCounterVec("sqs_msg_processed_total", "The total number of SQS messages processed", []string{"app", "queue"}),
+		msgProcessedFailure: a.Metrics.NewCounterVec("sqs_msg_processed_failure_total", "The total number of SQS messages that failed to be processed", []string{"app", "queue"}),
+		msgDeleted:          a.Metrics.NewCounterVec("sqs_msg_deleted_total", "The total number of SQS messages deleted", []string{"app", "queue"}),
 	}
 
 	a.sqsWorkers = append(a.sqsWorkers, s)

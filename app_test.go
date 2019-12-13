@@ -16,6 +16,7 @@ func TestNewApp(t *testing.T) {
 	assert.Nil(t, app.httpServers)
 	assert.Nil(t, app.sqsWorkers)
 	assert.Equal(t, "MyApp", app.name, "wrong app name")
+	assert.NotNil(t, app.Metrics)
 }
 
 func TestReadConfig(t *testing.T) {

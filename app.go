@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,20 +10,19 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 )
 
 type App struct {
-	name               string
-	httpServers        []*httpState
-	sqsWorkers         []*sqsWorkerState
-	tasks              []*taskState
-	wg                 *sync.WaitGroup
-	cancel             context.CancelFunc
-	logger             zerolog.Logger
-	prometheusRegistry *prometheus.Registry
+	name        string
+	httpServers []*httpState
+	sqsWorkers  []*sqsWorkerState
+	tasks       []*taskState
+	wg          *sync.WaitGroup
+	cancel      context.CancelFunc
+	logger      zerolog.Logger
+	Metrics     *Metrics
 }
 
 type AppConfig struct {
@@ -47,10 +45,10 @@ func NewApp(name string) *App {
 	}
 
 	app := &App{
-		name:               name,
-		wg:                 &sync.WaitGroup{},
-		logger:             logger,
-		prometheusRegistry: prometheus.NewRegistry(),
+		name:    name,
+		wg:      &sync.WaitGroup{},
+		logger:  logger,
+		Metrics: NewMetrics(strings.ToLower(strings.Join(splitUpperCamelCase(name), "_"))),
 	}
 
 	if _, err := os.Stat(".env"); err == nil {
@@ -80,7 +78,7 @@ func (a App) ReadConfig(c interface{}, name ...string) error {
 
 func (a *App) AddPrometheus(path string, port int) {
 	promMux := http.NewServeMux()
-	promMux.Handle(path, promhttp.HandlerFor(a.prometheusRegistry, promhttp.HandlerOpts{}))
+	promMux.Handle(path, promhttp.HandlerFor(a.Metrics.registry, promhttp.HandlerOpts{}))
 	a.AddHttp(promMux, port)
 }
 
@@ -137,17 +135,4 @@ func logLevelForEnv(env string) zerolog.Level {
 func loggerForEnv(logger zerolog.Logger, env string) zerolog.Logger {
 	logLevel := logLevelForEnv(env)
 	return logger.Level(logLevel)
-}
-
-func (a *App) NewCounterVec(name string, help string, labelNames []string) *prometheus.CounterVec {
-	prefix := strings.ToLower(strings.Join(splitUpperCamelCase(a.name), "_"))
-
-	m := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: fmt.Sprintf("sf_%s_%s", prefix, name),
-		Help: help,
-	}, labelNames)
-
-	a.prometheusRegistry.MustRegister(m)
-
-	return m
 }

@@ -26,7 +26,7 @@ func main() {
 
 	a.AddPrometheus("/metrics", 9090)
 
-	fooProcessed := a.NewCounterVec("foo_processed_total", "Total number of processed foos", []string{"bar"})
+	fooProcessed := a.Metrics.NewCounterVec("foo_processed_total", "Total number of processed foos", []string{"bar"})
 
 	msgRouter := app.NewMsgRouter()
 	msgRouter.HandleFunc("foo", func(msg *app.MsgContext) error {
