@@ -27,11 +27,19 @@ type Metrics struct {
 
 func (m Metrics) NewCounterVec(name string, help string, labelNames []string) *prometheus.CounterVec {
 	c := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: fmt.Sprintf("sf_%s_%s", m.prefix, name),
+		Name: fmt.Sprintf("%s_%s", m.prefix, name),
 		Help: help,
 	}, labelNames)
 
 	m.registry.MustRegister(c)
 
 	return c
+}
+
+func metricName(prefix, name string) string {
+	if prefix == "" {
+		return name
+	}
+
+	return fmt.Sprintf("%s_%s", prefix, name)
 }

@@ -11,3 +11,8 @@ func TestNewMetrics(t *testing.T) {
 
 	assert.Equal(t, "foo_bar", m.prefix)
 }
+
+func TestMetricName(t *testing.T) {
+	assert.Equal(t, "bar", metricName("", "bar"))
+	assert.Equal(t, "foo_bar", metricName("foo", "bar"))
+}
