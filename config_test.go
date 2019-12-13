@@ -12,10 +12,10 @@ func TestReadEnvConfig(t *testing.T) {
 		Foo string
 	}{}
 
-	os.Setenv("MYPREFIX_FOO", "Foo")
-	defer os.Unsetenv("MYPREFIX_FOO")
+	os.Setenv("MY_APP_FOO", "Foo")
+	defer os.Unsetenv("MY_APP_FOO")
 
-	err := ReadEnvConfig("MYPREFIX", c)
+	err := ReadEnvConfig(c, "My", "App")
 	assert.Nil(t, err)
 	assert.Equal(t, "Foo", c.Foo)
 }

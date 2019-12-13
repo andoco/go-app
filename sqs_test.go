@@ -12,10 +12,10 @@ import (
 )
 
 func TestAddSQS(t *testing.T) {
-	os.Setenv("MYAPP_FOO_ENDPOINT", "test-endpoint")
-	defer os.Unsetenv("MYAPP_FOO_ENDPOINT")
-	os.Setenv("MYAPP_FOO_RECEIVEQUEUE", "test-queue")
-	defer os.Unsetenv("MYAPP_FOO_RECEIVEQUEUE")
+	os.Setenv("MY_APP_FOO_ENDPOINT", "test-endpoint")
+	defer os.Unsetenv("MY_APP_FOO_ENDPOINT")
+	os.Setenv("MY_APP_FOO_RECEIVEQUEUE", "test-queue")
+	defer os.Unsetenv("MY_APP_FOO_RECEIVEQUEUE")
 
 	app := NewApp(NewAppConfig("MyApp"))
 	app.AddSQS("Foo", NewMsgRouter())

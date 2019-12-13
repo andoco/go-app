@@ -9,9 +9,8 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-// ReadEnvConfig will read config from environment variables
-// prefixed with prefix and set values on c.
-func ReadEnvConfig(prefix string, c interface{}) error {
+func ReadEnvConfig(c interface{}, path ...string) error {
+	prefix := BuildEnvConfigName(path...)
 	if err := envconfig.Process(prefix, c); err != nil {
 		return fmt.Errorf("could not read config: %w", err)
 	}

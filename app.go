@@ -77,8 +77,9 @@ func NewApp(config *AppConfig) *App {
 }
 
 func (a App) ReadConfig(c interface{}, name ...string) error {
-	name = append(splitUpperCamelCase(a.config.Name), name...)
-	return ReadEnvConfig(BuildEnvConfigName(name...), c)
+	splitAppName := splitUpperCamelCase(a.config.Name)
+	path := append(splitAppName, name...)
+	return ReadEnvConfig(c, path...)
 }
 
 func (a *App) AddPrometheus(path string, port int) {

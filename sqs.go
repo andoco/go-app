@@ -59,7 +59,7 @@ func (f MsgHandlerFunc) Process(msg *MsgContext) error {
 
 func (a *App) AddSQS(prefix string, handler MsgHandler) {
 	c := NewSQSWorkerConfig()
-	if err := ReadEnvConfig(BuildEnvConfigName(a.config.Name, prefix), c); err != nil {
+	if err := a.ReadConfig(c, prefix); err != nil {
 		a.logger.Fatal().Err(err).Str("prefix", prefix).Msg("Cannot read configuration")
 	}
 
