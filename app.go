@@ -84,7 +84,7 @@ func (a App) ReadConfig(c interface{}, name ...string) error {
 
 func (a *App) AddPrometheus(path string, port int) {
 	promMux := http.NewServeMux()
-	promMux.Handle(path, promhttp.HandlerFor(a.Metrics.registry, promhttp.HandlerOpts{}))
+	promMux.Handle(path, promhttp.InstrumentMetricHandler(a.Metrics.registry, promhttp.HandlerFor(a.Metrics.registry, promhttp.HandlerOpts{})))
 	a.AddHttp(promMux, port)
 }
 

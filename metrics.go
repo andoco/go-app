@@ -14,9 +14,13 @@ type PrometheusConfig struct {
 }
 
 func NewMetrics(config PrometheusConfig) *Metrics {
+	r := prometheus.NewRegistry()
+	r.MustRegister(prometheus.NewBuildInfoCollector())
+	r.MustRegister(prometheus.NewGoCollector())
+
 	return &Metrics{
 		prefix:   config.Prefix,
-		registry: prometheus.NewRegistry(),
+		registry: r,
 	}
 }
 
