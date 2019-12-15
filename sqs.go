@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -23,10 +24,11 @@ type sqsWorkerState struct {
 }
 
 type sqsMetrics struct {
-	msgReceived         *prometheus.CounterVec
-	msgProcessed        *prometheus.CounterVec
-	msgProcessedFailure *prometheus.CounterVec
-	msgDeleted          *prometheus.CounterVec
+	msgReceived          *prometheus.CounterVec
+	msgProcessed         *prometheus.CounterVec
+	msgProcessedDuration *prometheus.HistogramVec
+	msgProcessedFailure  *prometheus.CounterVec
+	msgDeleted           *prometheus.CounterVec
 }
 
 type SQSWorkerConfig struct {
@@ -77,10 +79,11 @@ func (a *App) AddSQSWithConfig(config *SQSWorkerConfig, handler MsgHandler) {
 	}
 
 	s.metrics = &sqsMetrics{
-		msgReceived:         a.Metrics.NewCounterVec("sqs_msg_received_total", "The total number of SQS messages received", []string{"app", "queue"}),
-		msgProcessed:        a.Metrics.NewCounterVec("sqs_msg_processed_total", "The total number of SQS messages processed", []string{"app", "queue"}),
-		msgProcessedFailure: a.Metrics.NewCounterVec("sqs_msg_processed_failure_total", "The total number of SQS messages that failed to be processed", []string{"app", "queue"}),
-		msgDeleted:          a.Metrics.NewCounterVec("sqs_msg_deleted_total", "The total number of SQS messages deleted", []string{"app", "queue"}),
+		msgReceived:          a.Metrics.NewCounterVec("sqs_msg_received_total", "The total number of SQS messages received", []string{"app", "queue"}),
+		msgProcessed:         a.Metrics.NewCounterVec("sqs_msg_processed_total", "The total number of SQS messages processed", []string{"app", "queue"}),
+		msgProcessedFailure:  a.Metrics.NewCounterVec("sqs_msg_processed_failure_total", "The total number of SQS messages that failed to be processed", []string{"app", "queue"}),
+		msgProcessedDuration: a.Metrics.NewHistogramVec("sqs_msg_processed_duration_seconds", "The duration taken to process the message", []string{"app", "queue"}),
+		msgDeleted:           a.Metrics.NewCounterVec("sqs_msg_deleted_total", "The total number of SQS messages deleted", []string{"app", "queue"}),
 	}
 
 	a.sqsWorkers = append(a.sqsWorkers, s)
@@ -144,13 +147,10 @@ func workerLoop(ctx context.Context, appName string, state *sqsWorkerState) {
 
 				msgCtx := newMessageContext(msg, state.msgTypeKey, logger)
 
-				if err := state.handler.Process(msgCtx); err != nil {
+				if err := processMessage(ctx, msgCtx, state); err != nil {
 					logger.Error().Err(err).Msg("Failed to handle message")
-					state.metrics.msgProcessedFailure.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
 					continue
 				}
-
-				state.metrics.msgProcessed.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
 
 				if err = state.queue.Delete(ctx, msg, state.receiveQueue); err != nil {
 					logger.Error().Err(err).Msg("Failed to delete message")
@@ -161,4 +161,18 @@ func workerLoop(ctx context.Context, appName string, state *sqsWorkerState) {
 			}
 		}
 	}
+}
+
+func processMessage(ctx context.Context, msg *MsgContext, state *sqsWorkerState) error {
+	timer := prometheus.NewTimer(state.metrics.msgProcessedDuration.With(prometheus.Labels{"queue": state.receiveQueue}))
+
+	if err := state.handler.Process(msg); err != nil {
+		state.metrics.msgProcessedFailure.With(prometheus.Labels{"queue": state.receiveQueue}).Inc()
+		return fmt.Errorf("processing message with handler: %w", err)
+	}
+
+	timer.ObserveDuration()
+	state.metrics.msgProcessed.With(prometheus.Labels{"queue": state.receiveQueue}).Inc()
+
+	return nil
 }
