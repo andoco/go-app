@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 )
 
 // Receiver is an interface for receiving messages from a queue.
@@ -24,13 +25,13 @@ type Sender interface {
 	Send(ctx context.Context, body string, queue string) error
 }
 
-func NewQueue(config *QueueConfig, svc *sqs.SQS) *Queue {
+func NewQueue(config *QueueConfig, svc sqsiface.SQSAPI) *Queue {
 	return &Queue{config: config, svc: svc}
 }
 
 type Queue struct {
 	config *QueueConfig
-	svc    *sqs.SQS
+	svc    sqsiface.SQSAPI
 }
 
 func NewQueueConfig(msgTypeKey string) *QueueConfig {
