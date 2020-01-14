@@ -91,11 +91,40 @@ func TestDelete(t *testing.T) {
 	}
 }
 
+func TestSend(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		clientErr error
+		err       string
+	}{
+		{name: "no error"},
+		{name: "cancellation error", clientErr: awserr.New(request.CanceledErrorCode, "test-error", nil)},
+		{name: "other error", clientErr: awserr.New("error-while-sending", "test-error", nil), err: "error-while-sending"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mockSvc := &mockSQSClient{err: tc.clientErr}
+			qconf := NewQueueConfig("msgType")
+			queue := NewQueue(qconf, mockSvc)
+			err := queue.Send(context.TODO(), "test-body", "test-queue")
+
+			if tc.err == "" {
+				require.NoError(t, err)
+				require.NotNil(t, mockSvc.sendInput)
+				assert.Equal(t, "test-queue", *mockSvc.sendInput.QueueUrl)
+				assert.Equal(t, "test-body", *mockSvc.sendInput.MessageBody)
+			} else {
+				require.Error(t, err)
+				assert.Regexp(t, tc.err, err.Error())
+			}
+		})
+	}
+}
+
 type mockSQSClient struct {
 	sqsiface.SQSAPI
-	err          error
-	output       *sqs.ReceiveMessageOutput
-	deleteOutput *sqs.DeleteMessageOutput
+	err       error
+	output    *sqs.ReceiveMessageOutput
+	sendInput *sqs.SendMessageInput
 }
 
 func (m *mockSQSClient) ReceiveMessageWithContext(aws.Context, *sqs.ReceiveMessageInput, ...request.Option) (*sqs.ReceiveMessageOutput, error) {
@@ -106,8 +135,10 @@ func (m *mockSQSClient) ReceiveMessageWithContext(aws.Context, *sqs.ReceiveMessa
 }
 
 func (m *mockSQSClient) DeleteMessageWithContext(aws.Context, *sqs.DeleteMessageInput, ...request.Option) (*sqs.DeleteMessageOutput, error) {
-	if m.deleteOutput != nil {
-		return m.deleteOutput, nil
-	}
+	return nil, m.err
+}
+
+func (m *mockSQSClient) SendMessageWithContext(ctx aws.Context, input *sqs.SendMessageInput, options ...request.Option) (*sqs.SendMessageOutput, error) {
+	m.sendInput = input
 	return nil, m.err
 }
