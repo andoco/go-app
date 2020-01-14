@@ -83,6 +83,9 @@ func TestDelete(t *testing.T) {
 
 			if tc.err == "" {
 				require.NoError(t, err)
+				require.NotNil(t, mockSvc.deleteInput)
+				assert.Equal(t, "test-queue", *mockSvc.deleteInput.QueueUrl)
+				assert.Equal(t, "test-receipt-handle", *mockSvc.deleteInput.ReceiptHandle)
 			} else {
 				require.Error(t, err)
 				assert.Regexp(t, tc.err, err.Error())
@@ -122,9 +125,10 @@ func TestSend(t *testing.T) {
 
 type mockSQSClient struct {
 	sqsiface.SQSAPI
-	err       error
-	output    *sqs.ReceiveMessageOutput
-	sendInput *sqs.SendMessageInput
+	err         error
+	output      *sqs.ReceiveMessageOutput
+	deleteInput *sqs.DeleteMessageInput
+	sendInput   *sqs.SendMessageInput
 }
 
 func (m *mockSQSClient) ReceiveMessageWithContext(aws.Context, *sqs.ReceiveMessageInput, ...request.Option) (*sqs.ReceiveMessageOutput, error) {
@@ -134,7 +138,8 @@ func (m *mockSQSClient) ReceiveMessageWithContext(aws.Context, *sqs.ReceiveMessa
 	return nil, m.err
 }
 
-func (m *mockSQSClient) DeleteMessageWithContext(aws.Context, *sqs.DeleteMessageInput, ...request.Option) (*sqs.DeleteMessageOutput, error) {
+func (m *mockSQSClient) DeleteMessageWithContext(ctx aws.Context, input *sqs.DeleteMessageInput, options ...request.Option) (*sqs.DeleteMessageOutput, error) {
+	m.deleteInput = input
 	return nil, m.err
 }
 
