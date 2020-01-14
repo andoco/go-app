@@ -13,14 +13,20 @@ Minimal Go framework for microservice applications running in [AWS](https://aws.
 
 Build:
 
-```go
+```sh
 go build ./...
 ```
 
 Test:
 
-```go
+```sh
 go test
+```
+
+Coverage:
+
+```sh
+go test -coverprofile=coverage.out; go tool cover -func=coverage.out
 ```
 
 ## Getting Started
