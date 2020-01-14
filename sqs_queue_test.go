@@ -62,15 +62,52 @@ func TestReceiveWhenNonCancelledErrorReturnsError(t *testing.T) {
 	assert.Nil(t, msgs)
 }
 
+func TestDelete(t *testing.T) {
+	testCases := []struct {
+		name      string
+		clientErr error
+		err       string
+	}{
+		{name: "no error"},
+		{name: "cancellation error", clientErr: awserr.New(request.CanceledErrorCode, "test-error", nil)},
+		{name: "other error", clientErr: awserr.New("error-while-deleting", "test-error", nil), err: "error-while-deleting"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockSvc := &mockSQSClient{err: tc.clientErr}
+			qconf := NewQueueConfig("msgType")
+			queue := NewQueue(qconf, mockSvc)
+			msg := &sqs.Message{MessageId: aws.String("test-message-id"), ReceiptHandle: aws.String("test-receipt-handle")}
+			err := queue.Delete(context.TODO(), msg, "test-queue")
+
+			if tc.err == "" {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				assert.Regexp(t, tc.err, err.Error())
+			}
+		})
+	}
+}
+
 type mockSQSClient struct {
 	sqsiface.SQSAPI
-	err    error
-	output *sqs.ReceiveMessageOutput
+	err          error
+	output       *sqs.ReceiveMessageOutput
+	deleteOutput *sqs.DeleteMessageOutput
 }
 
 func (m *mockSQSClient) ReceiveMessageWithContext(aws.Context, *sqs.ReceiveMessageInput, ...request.Option) (*sqs.ReceiveMessageOutput, error) {
 	if m.output != nil {
 		return m.output, nil
+	}
+	return nil, m.err
+}
+
+func (m *mockSQSClient) DeleteMessageWithContext(aws.Context, *sqs.DeleteMessageInput, ...request.Option) (*sqs.DeleteMessageOutput, error) {
+	if m.deleteOutput != nil {
+		return m.deleteOutput, nil
 	}
 	return nil, m.err
 }
