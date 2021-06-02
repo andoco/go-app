@@ -147,7 +147,7 @@ func workerLoop(ctx context.Context, appName string, state *sqsWorkerState) {
 
 				msgCtx := newMessageContext(msg, state.msgTypeKey, logger)
 
-				if err := processMessage(ctx, msgCtx, state); err != nil {
+				if err := processMessage(ctx, msgCtx, state, appName); err != nil {
 					logger.Error().Err(err).Msg("Failed to handle message")
 					continue
 				}
@@ -163,16 +163,16 @@ func workerLoop(ctx context.Context, appName string, state *sqsWorkerState) {
 	}
 }
 
-func processMessage(ctx context.Context, msg *MsgContext, state *sqsWorkerState) error {
-	timer := prometheus.NewTimer(state.metrics.msgProcessedDuration.With(prometheus.Labels{"queue": state.receiveQueue}))
+func processMessage(ctx context.Context, msg *MsgContext, state *sqsWorkerState, appName string) error {
+	timer := prometheus.NewTimer(state.metrics.msgProcessedDuration.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}))
 
 	if err := state.handler.Process(msg); err != nil {
-		state.metrics.msgProcessedFailure.With(prometheus.Labels{"queue": state.receiveQueue}).Inc()
+		state.metrics.msgProcessedFailure.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
 		return fmt.Errorf("processing message with handler: %w", err)
 	}
 
 	timer.ObserveDuration()
-	state.metrics.msgProcessed.With(prometheus.Labels{"queue": state.receiveQueue}).Inc()
+	state.metrics.msgProcessed.With(prometheus.Labels{"app": appName, "queue": state.receiveQueue}).Inc()
 
 	return nil
 }
